@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Recaudo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f3f0; color: #1a1a1a; font-size: 14px; }
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+/* KPI meta progress */
+.kpi-meta { margin-top: 8px; }
+.kpi-meta-bar { height: 3px; background: #f0eeea; border-radius: 2px; overflow: hidden; margin-bottom: 3px; }
+.kpi-meta-fill { height: 100%; border-radius: 2px; transition: width .5s; }
+.kpi-meta-pct { font-size: 10px; color: #aaa; }
+.kpi-meta-pct.over { color: #0d8a55; font-weight: 600; }
+.kpi-extra { font-size: 10px; color: #999; margin-top: 5px; }
+
+/* Header */
+.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+.header-left h1 { font-size: 18px; font-weight: 600; color: #111; }
+.header-left p  { font-size: 12px; color: #999; margin-top: 3px; }
+.header-right   { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Tabs */
+.tabs { display: flex; background: #e8e7e3; border-radius: 8px; padding: 3px; gap: 2px; }
+.tab  { padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; background: transparent; color: #666; font-family: inherit; transition: all .15s; }
+.tab.active { background: #fff; color: #111; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* KPI grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+.kpi { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #e8e8e8; }
+.kpi-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.kpi-value { font-size: 26px; font-weight: 600; line-height: 1; color: #111; }
+.kpi-sub   { font-size: 11px; color: #bbb; margin-top: 5px; }
+
+/* Metas banner */
+.metas-ph { background: #fffcf5; border: 1px dashed #e5c96a; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #7a6200; }
+
+/* Section label */
+.section-title { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; font-weight: 600; }
+
+/* Bucket grid */
+.bucket-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+.bucket { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 16px; border-left: 3px solid; }
+.bucket-name { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+.bucket-val  { font-size: 22px; font-weight: 700; margin-bottom: 2px; color: #111; }
+.bucket-pct  { font-size: 12px; }
+.pbar  { height: 5px; border-radius: 3px; background: #f0eeea; overflow: hidden; }
+.pfill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* Views */
+.view { display: none; }
+.view.active { display: block; }
+
+/* Chart box */
+.chart-box    { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.chart-header { margin-bottom: 4px; }
+.chart-title  { font-size: 13px; font-weight: 600; color: #333; }
+.chart-sub    { font-size: 11px; color: #aaa; margin-top: 2px; margin-bottom: 16px; }
+.chart-wrap   { position: relative; width: 100%; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+.li  { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
+.lsq { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+/* Mensual cards */
+.mes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.mes-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; }
+.mes-card.active-mes { border: 1.5px solid #1D9E75; }
+.mes-label  { font-size: 10px; color: #999; text-transform: uppercase; margin-bottom: 4px; }
+.mes-val    { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 2px; }
+.mes-txn    { font-size: 10px; color: #bbb; margin-bottom: 6px; }
+.mes-delta  { font-size: 11px; font-weight: 500; }
+
+/* Asesor cards */
+.asesor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.asesor-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; }
+.asesor-card.leader { border-color: #1D9E75; box-shadow: 0 0 0 1px #1D9E7530; }
+.asesor-name { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: .4px; }
+.asesor-val  { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 2px; line-height: 1.1; }
+.asesor-meta-row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 4px; }
+.asesor-pct-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.asesor-pct-badge.ok  { background: #e6f7f1; color: #0d8a55; }
+.asesor-pct-badge.mid { background: #fff4e0; color: #b86e00; }
+.asesor-pct-badge.low { background: #fdecea; color: #c0391b; }
+.asesor-clientes { font-size: 10px; color: #999; margin-bottom: 6px; }
+.asesor-pbar { height: 5px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+.asesor-pfill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* ── Transición ── */
+.tab-transicion { border-left: 2px solid #e0e0e0; margin-left: 4px; padding-left: 12px; }
+.trans-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.trans-title  { font-size: 16px; font-weight: 700; color: #111; }
+.trans-sub    { font-size: 12px; color: #999; margin-top: 2px; }
+.trans-overall{ text-align: right; }
+.trans-overall-pct { font-size: 28px; font-weight: 700; color: #1D9E75; line-height: 1; }
+.trans-overall-lbl { font-size: 11px; color: #999; margin-top: 2px; }
+.trans-table  { background: #fff; border: 1px solid #ececec; border-radius: 12px; overflow: hidden; }
+.trans-col-head { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 10px 20px; background: #f8f8f8; border-bottom: 1px solid #ececec; font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .5px; }
+.trans-row    { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 14px 20px; border-bottom: 1px solid #f2f2f2; align-items: center; cursor: pointer; transition: background .15s; }
+.trans-row:last-child { border-bottom: none; }
+.trans-row:hover { background: #fafafa; }
+.trans-row.editing { background: #f5fdf9; }
+.trans-name   { font-size: 13px; font-weight: 600; color: #222; }
+.trans-note   { font-size: 10px; color: #f5a623; font-weight: 500; margin-top: 2px; }
+.trans-resp   { font-size: 12px; color: #666; }
+.trans-pbar-wrap { display: flex; align-items: center; gap: 8px; }
+.trans-pbar   { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.trans-pfill  { height: 100%; border-radius: 4px; transition: width .4s, background .3s; }
+.trans-pct-lbl{ font-size: 12px; font-weight: 700; width: 36px; text-align: right; flex-shrink: 0; }
+.trans-badge  { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.trans-badge.gray   { background: #f0f0f0; color: #888; }
+.trans-badge.red    { background: #fdecea; color: #c0391b; }
+.trans-badge.yellow { background: #fff8e1; color: #b86e00; }
+.trans-badge.teal   { background: #d4f0e8; color: #1D9E75; }
+.trans-badge.green  { background: #e6f7f1; color: #0d8a55; }
+.trans-dot    { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.trans-dot.gray   { background: #bbb; }
+.trans-dot.red    { background: #c0391b; }
+.trans-dot.yellow { background: #e5a020; }
+.trans-dot.teal   { background: #5DCAA5; }
+.trans-dot.green  { background: #1D9E75; }
+.trans-editor { display: none; grid-column: 1/-1; padding: 10px 0 4px; }
+.trans-editor.open { display: block; }
+.trans-slider { width: 100%; accent-color: #1D9E75; }
+.trans-obs    { font-size: 12px; color: #555; line-height: 1.5; padding-right: 8px; }
+
+/* Loading / Error */
+#loading, #error-msg { text-align: center; padding: 60px 20px; color: #888; }
+#error-msg { color: #c0391b; }
+.spinner { width: 32px; height: 32px; border: 3px solid #eee; border-top-color: #1D9E75; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 700px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .bucket-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div id="loading"><div class="spinner"></div><p>Cargando datos…</p></div>
+  <div id="error-msg" style="display:none"></div>
+
+  <div id="dashboard" style="display:none">
+
+    <div class="header">
+      <div class="header-left">
+        <h1>Recaudo de cartera</h1>
+        <p id="dash-subtitle">Cargando…</p>
+        <p id="sync-indicator" style="font-size:11px;color:#1D9E75;margin-top:3px;font-weight:600"></p>
+      </div>
+      <div class="header-right">
+        <div class="tabs">
+          <button class="tab active" onclick="switchView('diario',this)">Diario</button>
+          <button class="tab" onclick="switchView('semanal',this)">Sprints</button>
+          <button class="tab" onclick="switchView('mensual',this)">Mensual</button>
+          <button class="tab" onclick="switchView('asesores',this)">Asesores</button>
+          <button class="tab tab-transicion" onclick="switchView('transicion',this)">⚡ Transición</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="metas-ph" id="metas-banner">
+      🎯 <span id="metas-banner-text"><strong>Cargando metas…</strong></span>
+    </div>
+
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div id="bucket-section">
+      <div class="section-title" id="bucket-title">Distribución por rango de mora</div>
+      <div class="bucket-grid" id="bucket-grid"></div>
+    </div>
+
+    <!-- DIARIO -->
+    <div class="view active" id="view-diario">
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Recaudo — últimos 10 días</div>
+          <div class="chart-sub">Cada barra es un día. Se cruzan meses si aplica. La línea muestra el promedio diario del mes en curso.</div>
+        </div>
+        <div class="chart-wrap" style="height:240px">
+          <canvas id="chart-diario"></canvas>
+        </div>
+      </div>
+      <div class="chart-box" style="margin-top:12px">
+        <div class="chart-header">
+          <div class="chart-title">Recaudo acumulado del mes</div>
+          <div class="chart-sub" id="diario-acum-sub">Progreso día a día hacia la meta mensual.</div>
+        </div>
+        <div class="chart-wrap" style="height:220px">
+          <canvas id="chart-diario-acum"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEMANAL -->
+    <div class="view" id="view-semanal">
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Recaudo por Sprint del mes</div>
+          <div class="chart-sub">3 sprints fijos: Sprint 1 (1–10), Sprint 2 (11–20), Sprint 3 (21–fin de mes). Sprint actual destacado.</div>
+        </div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chart-semanal"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENSUAL -->
+    <div class="view" id="view-mensual">
+
+      <!-- 1. Recaudo histórico por mes -->
+      <div class="section-title">Recaudo histórico</div>
+      <div class="mes-grid" id="mes-cards"></div>
+
+      <!-- 2. KPIs del mes actual (2 tarjetas) -->
+      <div class="kpi-grid" id="mes-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px"></div>
+
+      <!-- 3. Distribución por franjas de mora -->
+      <div id="mes-bucket-section">
+        <div class="section-title" id="mes-bucket-title">Variación por rango de mora — vs mes anterior</div>
+        <div class="bucket-grid" id="mes-bucket-grid"></div>
+      </div>
+
+      <!-- 4. Gráfico principal -->
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Composición del recaudo por mes</div>
+          <div class="chart-sub">Cada barra muestra el total mensual dividido por estado de cartera.</div>
+        </div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chart-mensual"></canvas>
+        </div>
+        <div class="legend" id="mensual-legend"></div>
+      </div>
+
+    </div>
+
+    <!-- TRANSICIÓN -->
+    <div class="view" id="view-transicion">
+      <div class="trans-header">
+        <div>
+          <div class="trans-title">Transición Agrapp → Platam</div>
+          <div class="trans-sub">Haz clic en cualquier fila para editar el avance directamente.</div>
+        </div>
+        <div class="trans-overall" id="trans-overall"></div>
+      </div>
+      <div class="trans-table">
+        <div class="trans-col-head">
+          <span>Tema</span><span>Responsable</span><span style="text-align:center">Avance</span><span style="text-align:center">Estado</span>
+        </div>
+        <div id="trans-rows"></div>
+      </div>
+    </div>
+
+    <!-- ASESORES -->
+    <div class="view" id="view-asesores">
+      <div class="asesor-grid" id="asesor-cards"></div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Ranking de asesores — mes en curso</div>
+          <div class="chart-sub">Ordenados de mayor a menor recaudo.</div>
+        </div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chart-asesores"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+Chart.register(ChartDataLabels);
+
+/* ─── CONFIG ─────────────────────────────────────── */
+const CONFIG = {
+  SHEET_ID:   '1z1qaJTx8xUj4ho6LWSPBuCwKSHkQ2O_Q50GfO3nEagg',
+  GID:        '0',
+  METAS_GID:  '325243383',
+  TRANS_GID:  '1278724273',
+  META_PROVISIONAL: 320_000_000,
+};
+
+const BUCKETS = [
+  { key: 'Al día',    label: 'Al día',     color: '#1D9E75' },
+  { key: 'Mora 1-30', label: '1–30 días',  color: '#5DCAA5' },
+  { key: 'Mora > 30', label: '31–60 días', color: '#EF9F27' },
+  { key: 'Mora > 60', label: '61–90 días', color: '#BA7517' },
+  { key: 'Mora > 90', label: '+90 días',   color: '#D85A30' },
+];
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+/* ─── GLOBALS ────────────────────────────────────── */
+let allRows    = [];
+let charts     = {};
+let COL_ESTADO = 'Estado de cartera';
+let COL_ASESOR = 'ASESOR QUE REPORTA';
+let metasData  = {};
+let metasFranjaData = {}; // key: `${año}::${bucketKey}` -> { mensual, diaria, semanal }
+let metaAsesorMensual = null; // fila "Meta Asesor Mensual" del Sheet "Metas" (valor único, sin año/mes)
+let currentView = 'diario';
+let lastRendered = null; // snapshot for switchView re-render
+
+/* ─── HELPERS ────────────────────────────────────── */
+function parseNum(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  let str = String(val).trim().replace(/\$/g, '');
+  if (!str || ['#N/A','#REF!','#N/D','No encontrado'].includes(str)) return 0;
+  const dots = (str.match(/\./g) || []).length;
+  if (dots > 1) return parseFloat(str.replace(/\./g, '')) || 0;
+  if (dots === 1) {
+    const dec = str.split('.')[1] || '';
+    if (dec.length === 3) return parseFloat(str.replace('.', '')) || 0;
+    return parseFloat(str) || 0;
+  }
+  return parseFloat(str) || 0;
+}
+
+function parseDate(val) {
+  if (!val) return null;
+  const str = String(val).trim();
+  const gviz = str.match(/^Date\((\d+),(\d+),(\d+)\)/);
+  if (gviz) return new Date(+gviz[1], +gviz[2], +gviz[3]);
+  const parts = str.split('/');
+  if (parts.length === 3) return new Date(+parts[2], +parts[1] - 1, +parts[0]);
+  return null;
+}
+
+function fmtM(val) {
+  if (Math.abs(val) >= 1_000_000) return '$' + (val / 1_000_000).toFixed(1) + 'M';
+  return '$' + Math.round(val).toLocaleString('es-CO', { useGrouping: true }).replace(/,/g, '.');
+}
+// Para formatters de Chart.js que reciben el valor ya dividido por 1_000_000
+function fmtChart(millionsVal) {
+  const real = millionsVal * 1_000_000;
+  if (Math.abs(real) >= 1_000_000) return '$' + millionsVal.toFixed(1) + 'M';
+  return '$' + Math.round(real).toLocaleString('es-CO', { useGrouping: true }).replace(/,/g, '.');
+}
+// Para ejes Y (reciben el valor en millones ya procesado por Chart.js)
+function fmtAxis(v) {
+  const real = v * 1_000_000;
+  if (Math.abs(real) >= 1_000_000) return '$' + v.toFixed(1) + 'M';
+  if (real === 0) return '$0';
+  return '$' + (Math.round(real / 1000) * 1000).toLocaleString('es-CO', { useGrouping: true }).replace(/,/g, '.');
+}
+function fmtNum(n) { return Math.round(n).toLocaleString('es-CO'); }
+
+/* ─── ISO WEEK ───────────────────────────────────── */
+function getISOWeek(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return { year: d.getFullYear(), week };
+}
+
+function getWeekBounds(year, week) {
+  const jan4 = new Date(year, 0, 4);
+  const dow  = jan4.getDay() || 7;
+  const mon  = new Date(jan4);
+  mon.setDate(jan4.getDate() - (dow - 1) + (week - 1) * 7);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return { start: mon, end: sun };
+}
+
+function fmtDateShort(d) {
+  return d.getDate() + ' ' + MESES_CORTO[d.getMonth()];
+}
+
+function isoKey(year, week) {
+  return `${year}-W${String(week).padStart(2,'0')}`;
+}
+
+/* ─── CARGA ──────────────────────────────────────── */
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const el = document.getElementById('error-msg');
+  el.style.display = 'block';
+  el.innerHTML = `⚠️ <strong>Error:</strong> ${msg}<br><br>
+    <small>Verifica que el Sheet esté compartido como "Cualquiera con el enlace puede ver".</small>`;
+}
+
+function onSheetData(resp) {
+  if (resp.status !== 'ok') { showError('Google Sheets respondió con error.'); return; }
+  const cols = resp.table.cols.map(c => c.label);
+  allRows = resp.table.rows.map(row => {
+    const obj = {};
+    (row.c || []).forEach((cell, i) => {
+      obj[cols[i]] = (cell && cell.v !== null && cell.v !== undefined) ? cell.v : '';
+    });
+    return obj;
+  });
+
+  const allCols = Object.keys(allRows[0] || {});
+  COL_ESTADO = allCols.find(c => c.trim().toLowerCase().includes('estado')) || 'Estado de cartera';
+  COL_ASESOR = allCols.find(c => c.trim() === 'ASESOR QUE REPORTA') || 'ASESOR QUE REPORTA';
+
+  render();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  lastSyncAt = new Date();
+  updateSyncIndicator();
+}
+
+function loadData() {
+  window.google = window.google || {};
+  window.google.visualization = window.google.visualization || {};
+  window.google.visualization.Query = window.google.visualization.Query || {};
+  window.google.visualization.Query.setResponse = onSheetData;
+  const old = document.getElementById('script-data');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-data';
+  // "_" con timestamp evita que el navegador/CDN sirva una respuesta cacheada del Sheet
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&gid=${CONFIG.GID}&_=${Date.now()}`;
+  s.onerror = () => showError('No se pudo conectar al Sheet.');
+  document.head.appendChild(s);
+}
+
+/* ─── METAS ──────────────────────────────────────── */
+function loadMetas() {
+  const old = document.getElementById('script-metas');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-metas';
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onMetasData&gid=${CONFIG.METAS_GID}&_=${Date.now()}`;
+  s.onerror = () => {
+    document.getElementById('metas-banner-text').innerHTML = '<strong>Metas no disponibles.</strong>';
+  };
+  document.head.appendChild(s);
+}
+
+/* ─── AUTO-REFRESH: mantiene el dashboard vivo sin que el usuario recargue ── */
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+let lastSyncAt = null;
+
+function updateSyncIndicator() {
+  const el = document.getElementById('sync-indicator');
+  if (!el || !lastSyncAt) return;
+  const hh = String(lastSyncAt.getHours()).padStart(2,'0');
+  const mm = String(lastSyncAt.getMinutes()).padStart(2,'0');
+  el.textContent = `● Datos en vivo · última sincronización ${hh}:${mm}`;
+}
+
+function startAutoRefresh() {
+  setInterval(() => {
+    loadData();
+    loadMetas();
+  }, AUTO_REFRESH_MS);
+}
+
+// Normaliza el label de franja del Sheet ("1-30 días", "Más 90 días"...) al key de BUCKETS
+function mapFranjaLabelToBucketKey(label) {
+  const norm = String(label || '').toLowerCase().trim();
+  if (norm.includes('al d')) return 'Al día'; // "al día" / "al dia"
+  if (norm.includes('1-30'))  return 'Mora 1-30';
+  if (norm.includes('31-60')) return 'Mora > 30';
+  if (norm.includes('61-90')) return 'Mora > 60';
+  if (norm.includes('90'))    return 'Mora > 90'; // "Más 90 días" / "+90 días" / "mas 90 dias"
+  return null; // p.ej. "Castigos" — sin bucket asociado
+}
+
+function getMetaFranja(bucketKey, year) {
+  return metasFranjaData[`${year}::${bucketKey}`] || null;
+}
+
+function onMetasData(resp) {
+  if (resp.status !== 'ok') return;
+  const cols     = resp.table.cols.map(c => c.label.trim());
+  const colAno    = cols.findIndex(c => c.toLowerCase().includes('a') && c.toLowerCase().includes('o'));
+  const colMes    = cols.findIndex(c => c.toLowerCase() === 'mes');
+  const colMens   = cols.findIndex(c => c.toLowerCase().includes('mensual'));
+  const colDia    = cols.findIndex(c => c.toLowerCase().includes('diaria') || c.toLowerCase().includes('diario'));
+  const colSem    = cols.findIndex(c => c.toLowerCase().includes('semanal'));
+  const colMinima = cols.findIndex(c => c.toLowerCase().includes('minima') || c.toLowerCase().includes('mínima'));
+  (resp.table.rows || []).forEach(row => {
+    const c        = row.c || [];
+    const labelRaw = String(c[colMes]?.v ?? '').trim().toLowerCase();
+
+    // Fila especial "Meta Asesor Mensual" (sin año/mes, valor único en la columna "Meta mensual")
+    if (labelRaw.includes('meta asesor')) {
+      metaAsesorMensual = colMens >= 0 ? (parseNum(c[colMens]?.v) || null) : null;
+      return;
+    }
+
+    const ano    = c[colAno]?.v;
+    const mesRaw = c[colMes]?.v;
+    if (!ano || !mesRaw) return;
+    const metaVals = {
+      mensual: colMens   >= 0 ? (c[colMens]?.v   || null) : null,
+      diaria:  colDia    >= 0 ? (c[colDia]?.v    || null) : null,
+      semanal: colSem    >= 0 ? (c[colSem]?.v    || null) : null,
+      minima:  colMinima >= 0 ? (parseNum(c[colMinima]?.v) || null) : null,
+    };
+    const mesNum = Number(mesRaw);
+    if (!isNaN(mesNum) && mesNum >= 1 && mesNum <= 12) {
+      // Fila de meta mensual/diaria/semanal/mínima general (por año-mes)
+      metasData[`${ano}-${mesNum - 1}`] = metaVals;
+      return;
+    }
+    // Fila de meta por franja de mora (bloque "Franja" del Sheet)
+    const bucketKey = mapFranjaLabelToBucketKey(mesRaw);
+    if (!bucketKey) return;
+    metasFranjaData[`${ano}::${bucketKey}`] = metaVals;
+  });
+  if (allRows.length) { renderKPIs(); renderBuckets(); renderAsesores(); updateMetasBanner(); }
+}
+
+function getMeta(year, month) {
+  const fromSheet = metasData[`${year}-${month}`];
+  if (fromSheet?.mensual) return { ...fromSheet, provisional: false };
+  // Fallback provisional hasta que el Sheet tenga la meta cargada
+  return {
+    mensual:  CONFIG.META_PROVISIONAL,
+    diaria:   +(CONFIG.META_PROVISIONAL / 30).toFixed(0),
+    semanal:  +(CONFIG.META_PROVISIONAL / 4.33).toFixed(0),
+    minima:   null,
+    provisional: true,
+  };
+}
+
+function updateMetasBanner() {
+  const today = new Date();
+  const meta  = getMeta(today.getFullYear(), today.getMonth());
+  const text  = document.getElementById('metas-banner-text');
+  if (!meta?.mensual) {
+    text.innerHTML = '<strong>Meta mensual no configurada</strong> para el mes en curso.';
+    return;
+  }
+  const currMonthRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+  });
+  const totalMes = currMonthRows.reduce((s,r) => s + parseNum(r['VALOR']), 0);
+  const pct   = totalMes / meta.mensual * 100;
+  const color = pct >= 100 ? '#0d8a55' : pct >= 70 ? '#b86e00' : '#c0391b';
+  const minimaHtml = meta.minima
+    ? ` · Meta Mínima <strong>${fmtM(meta.minima)}</strong>`
+    : '';
+  text.innerHTML = `🎯 Meta Mensual Ideal <strong>${fmtM(meta.mensual)}</strong>${minimaHtml} · Recaudado <strong>${fmtM(totalMes)}</strong> · <span style="color:${color};font-weight:700">${pct.toFixed(1)}% cumplido</span>`;
+}
+
+/* ─── RENDER PRINCIPAL ───────────────────────────── */
+function render() {
+  const today = new Date();
+  // Fecha de corte = último día con datos registrados en el Sheet
+  const fechasConDatos = allRows.map(r => parseDate(r['Fecha de ingreso'])).filter(Boolean);
+  const fechaCorte = fechasConDatos.length
+    ? new Date(Math.max(...fechasConDatos.map(d => d.getTime())))
+    : new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  document.getElementById('dash-subtitle').textContent =
+    `Corte al ${fechaCorte.getDate()} de ${MESES[fechaCorte.getMonth()]} ${fechaCorte.getFullYear()} · ${allRows.length} pagos en total`;
+
+  lastRendered = true;
+  renderKPIs();
+  renderBuckets();
+  renderDiario();
+  renderDiarioAcumulado();
+  renderSemanal();
+  renderMensual();
+  renderAsesores();
+  updateMetasBanner();
+}
+
+/* ─── KPI CARD ───────────────────────────────────── */
+function kpiCard(label, value, sub, color, metaPct, extraNote) {
+  const bar = metaPct != null ? `
+    <div class="kpi-meta">
+      <div class="kpi-meta-bar">
+        <div class="kpi-meta-fill" style="width:${Math.min(metaPct,100).toFixed(1)}%;background:${metaPct>=100?'#0d8a55':metaPct>=70?'#e5a020':'#d85a30'}"></div>
+      </div>
+      <span class="kpi-meta-pct ${metaPct>=100?'over':''}">${metaPct.toFixed(0)}% de la meta</span>
+    </div>` : '';
+  const extra = extraNote ? `<div class="kpi-extra">${extraNote}</div>` : '';
+  return `<div class="kpi">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value" style="color:${color||'#111'}">${value}</div>
+    <div class="kpi-sub">${sub}</div>${bar}${extra}
+  </div>`;
+}
+
+function renderKPIs() {
+  const grid  = document.getElementById('kpi-grid');
+  const today = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth(), todayD = today.getDate();
+  const meta   = getMeta(todayY, todayM);
+
+  // Current month rows
+  const currMonthRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+  });
+  // Fecha de corte = último día con datos (normalmente ayer)
+  const fechasCorriente = currMonthRows.map(r => parseDate(r['Fecha de ingreso'])).filter(Boolean);
+  const dCorte = fechasCorriente.length
+    ? new Date(Math.max(...fechasCorriente.map(d => d.getTime()))).getDate()
+    : todayD - 1;
+
+  // Rows del día de corte ("ayer" en términos de reporte)
+  const ayerRows = currMonthRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getDate() === dCorte;
+  });
+  const recAyer  = ayerRows.reduce((s,r) => s + parseNum(r['VALOR']), 0);
+  const totalMes = currMonthRows.reduce((s,r) => s + parseNum(r['VALOR']), 0);
+
+  // Daily avg: solo días hasta la fecha de corte (no distorsiona con días sin datos)
+  const byDay = {};
+  currMonthRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d || d.getDate() > dCorte) return;
+    byDay[d.getDate()] = (byDay[d.getDate()] || 0) + parseNum(r['VALOR']);
+  });
+  const diasActivos = Object.keys(byDay).length;
+  const promDia     = diasActivos > 0 ? totalMes / diasActivos : 0;
+  const bestDia     = Object.entries(byDay).reduce((a,[k,v]) => v > a.val ? { day:+k, val:v } : a, { day:0, val:0 });
+
+  // ISO weeks
+  const currWeekInfo = getISOWeek(today);
+  const prevWeekDate = new Date(today); prevWeekDate.setDate(today.getDate() - 7);
+  const prevWeekInfo = getISOWeek(prevWeekDate);
+
+  const byWeek = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const { year, week } = getISOWeek(d);
+    const key = isoKey(year, week);
+    byWeek[key] = (byWeek[key] || 0) + parseNum(r['VALOR']);
+  });
+  const recSemActual = byWeek[isoKey(currWeekInfo.year, currWeekInfo.week)] || 0;
+  const recSemPrev   = byWeek[isoKey(prevWeekInfo.year, prevWeekInfo.week)] || 0;
+
+  // Mejor sprint del mes en curso (3 sprints: 1-10, 11-20, 21-fin)
+  const bySprintCurr = { 1:0, 2:0, 3:0 };
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d || d.getFullYear() !== todayY || d.getMonth() !== todayM) return;
+    bySprintCurr[sprintOfMonth(d.getDate())] += parseNum(r['VALOR']);
+  });
+  const bestSemVal = Math.max(...Object.values(bySprintCurr));
+
+  // Promedio histórico por sprint (3 sprints por mes)
+  const bySprintAll = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}-${sprintOfMonth(d.getDate())}`;
+    bySprintAll[key] = (bySprintAll[key] || 0) + parseNum(r['VALOR']);
+  });
+  const allWeekVals = Object.values(bySprintAll);
+  const promSemAll  = allWeekVals.length > 0 ? allWeekVals.reduce((s,v) => s+v, 0) / allWeekVals.length : 0;
+
+  // Monthly avg
+  const byMonth = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    byMonth[key] = (byMonth[key] || 0) + parseNum(r['VALOR']);
+  });
+  const prevMonthKey = todayM === 0 ? `${todayY-1}-11` : `${todayY}-${todayM-1}`;
+  const recMesAnt    = byMonth[prevMonthKey] || 0;
+  const mesesVals    = Object.values(byMonth);
+  const promMes      = mesesVals.length > 0 ? mesesVals.reduce((s,v) => s+v, 0) / mesesVals.length : 0;
+
+  // Asesor top (current month)
+  const byAsesor = {};
+  currMonthRows.forEach(r => {
+    const a = String(r[COL_ASESOR]||'').trim();
+    if (!a || a === '#N/D') return;
+    byAsesor[a] = (byAsesor[a] || 0) + parseNum(r['VALOR']);
+  });
+  const allAsesores = [...new Set(allRows.map(r => String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
+  const topAs = Object.entries(byAsesor).sort((a,b) => b[1]-a[1])[0];
+  const activosCount = Object.keys(byAsesor).length;
+  const promAsesor   = activosCount > 0 ? totalMes / activosCount : 0;
+  const topPct       = topAs && totalMes > 0 ? (topAs[1]/totalMes*100) : 0;
+
+  const currWeekBounds = getWeekBounds(currWeekInfo.year, currWeekInfo.week);
+  const prevWeekBounds = getWeekBounds(prevWeekInfo.year, prevWeekInfo.week);
+
+  // Resetear columnas/visibilidad por si venimos de semanal o asesores
+  // (en 'mensual' no se toca: switchView ya oculta #kpi-grid vía CARTERA_ELS)
+  grid.style.gridTemplateColumns = '';
+  if (currentView !== 'mensual') grid.style.display = '';
+
+  if (currentView === 'diario') {
+    const pctAyer = meta?.diaria && meta.diaria > 0 ? recAyer / meta.diaria * 100 : null;
+    const pctDia  = meta?.diaria && meta.diaria > 0 ? promDia / meta.diaria * 100 : null;
+    const cumplAyerStr   = pctAyer != null ? pctAyer.toFixed(1) + '%' : '0%';
+    const cumplAyerColor = pctAyer == null ? '#999' : pctAyer >= 100 ? '#0d8a55' : pctAyer >= 60 ? '#b86e00' : '#c0391b';
+    const cumplAyerSub   = meta?.diaria
+      ? `Meta diaria: ${fmtM(meta.diaria)} · ${ayerRows.length} pagos registrados`
+      : 'Meta diaria: Por definir · frente a vencimientos del día';
+    grid.innerHTML =
+      kpiCard('Recaudado ayer',            recAyer > 0 ? fmtM(recAyer) : '—',
+                                           `${ayerRows.length} pagos · corte día ${dCorte}`,
+                                           recAyer > 0 ? '#0d8a55' : '#999', pctAyer) +
+      kpiCard('Promedio diario',           fmtM(promDia),
+                                           meta?.diaria ? `meta diaria: ${fmtM(meta.diaria)}` : `promedio en ${MESES[todayM]}`,
+                                           '#b86e00', pctDia) +
+      kpiCard('% Cumplimiento recaudo día', cumplAyerStr,
+                                           cumplAyerSub,
+                                           cumplAyerColor, pctAyer);
+
+  } else if (currentView === 'semanal') {
+    const currSN     = sprintOfMonth(today.getDate()); // 1, 2 o 3
+    const prevMonth2 = todayM === 0 ? 11 : todayM - 1;
+    const prevYear2  = todayM === 0 ? todayY - 1 : todayY;
+    const prev2Month = prevMonth2 === 0 ? 11 : prevMonth2 - 1;
+    const prev2Year  = prevMonth2 === 0 ? prevYear2 - 1 : prevYear2;
+
+    const diasMes = new Date(todayY, todayM + 1, 0).getDate();
+    // Meta del sprint = "Meta semanal" del Sheet para el mes activo (misma meta para los 3 sprints del mes)
+    const metaSnAct = meta?.semanal || null;
+
+    function sprintTotal(year, month, sn) {
+      return allRows.filter(r => {
+        const d = parseDate(r['Fecha de ingreso']);
+        return d && d.getFullYear()===year && d.getMonth()===month && sprintOfMonth(d.getDate())===sn;
+      }).reduce((s,r) => s + parseNum(r['VALOR']), 0);
+    }
+
+    const currSnVal    = sprintTotal(todayY, todayM, currSN);
+    const prevMoCurrSn = sprintTotal(prevYear2, prevMonth2, currSN);
+    const varCurrSn    = prevMoCurrSn > 0 ? ((currSnVal - prevMoCurrSn) / prevMoCurrSn * 100) : null;
+    const pctSprintAct = metaSnAct ? currSnVal / metaSnAct * 100 : null;
+
+    // Sprint anterior (S1 → cierre S3 del mes anterior)
+    let prevSnVal, prevSnTitle, prevSnSub, prevSnCompVal, prevSnCompLabel;
+    if (currSN > 1) {
+      prevSnVal       = sprintTotal(todayY, todayM, currSN - 1);
+      prevSnCompVal   = sprintTotal(prevYear2, prevMonth2, currSN - 1);
+      prevSnTitle     = `Sprint ${currSN-1} de ${MESES[todayM]} (cerrado)`;
+      prevSnSub       = `Sprint ${currSN-1} de ${MESES_CORTO[prevMonth2]}: ${fmtM(prevMoCurrSn)}`;
+      prevSnCompLabel = `Sprint ${currSN-1} de ${MESES_CORTO[prevMonth2]}`;
+    } else {
+      prevSnVal       = sprintTotal(prevYear2, prevMonth2, 3);
+      prevSnCompVal   = sprintTotal(prev2Year, prev2Month, 3);
+      prevSnTitle     = `Cierre de ${MESES[prevMonth2]} (Sprint 3)`;
+      prevSnSub       = `Cierre de ${MESES_CORTO[prev2Month]}: ${fmtM(prevSnCompVal)}`;
+      prevSnCompLabel = `Cierre de ${MESES_CORTO[prev2Month]}`;
+    }
+    const varPrevSn = prevSnCompVal > 0 ? ((prevSnVal - prevSnCompVal) / prevSnCompVal * 100) : null;
+
+    const varStr = (pct, label) => pct != null
+      ? `<span style="color:${pct>=0?'#0d8a55':'#c0391b'};font-size:10px;font-weight:600">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% vs ${label}</span>`
+      : `<span style="color:#bbb;font-size:10px">Sin dato anterior</span>`;
+
+    const sprintRanges = ['días 1–10', 'días 11–20', `días 21–${diasMes}`];
+
+    grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    grid.innerHTML =
+      kpiCard(`Sprint ${currSN} de ${MESES[todayM]} (en curso)`,
+               fmtM(currSnVal),
+               `${sprintRanges[currSN-1]} · Sprint ${currSN} de ${MESES_CORTO[prevMonth2]}: ${fmtM(prevMoCurrSn)} · ${varStr(varCurrSn, MESES_CORTO[prevMonth2])}`,
+               '#0d8a55', pctSprintAct) +
+      kpiCard('% Cumplimiento sprint',
+               pctSprintAct != null ? pctSprintAct.toFixed(1) + '%' : '0%',
+               metaSnAct
+                 ? `${meta.provisional ? 'Meta sprint (Provisional)' : 'Meta sprint'}: ${fmtM(metaSnAct)}`
+                 : 'Meta del sprint: Por definir',
+               pctSprintAct == null ? '#999' : pctSprintAct >= 100 ? '#0d8a55' : pctSprintAct >= 60 ? '#b86e00' : '#c0391b',
+               pctSprintAct) +
+      kpiCard(prevSnTitle,
+               fmtM(prevSnVal),
+               `${prevSnSub} · ${varStr(varPrevSn, prevSnCompLabel)}`,
+               '#111');
+
+  } else if (currentView === 'mensual') {
+    const pctMens       = meta?.mensual ? totalMes / meta.mensual * 100 : null;
+    const pctMinima     = meta?.minima  ? totalMes / meta.minima  * 100 : null;
+    const mesPrevNombre = MESES[todayM===0?11:todayM-1];
+    const minimaNote    = pctMinima != null
+      ? `<strong style="color:${pctMinima>=100?'#0d8a55':'#b86e00'}">${pctMinima.toFixed(1)}%</strong> de la meta mínima (${fmtM(meta.minima)})`
+      : null;
+    const mesGrid = document.getElementById('mes-kpi-grid');
+    if (mesGrid) mesGrid.innerHTML =
+      kpiCard(`Recaudado a la fecha — ${MESES[todayM]}`,
+              fmtM(totalMes),
+              `${currMonthRows.length} pagos registrados · corte día ${dCorte}`,
+              '#0d8a55', pctMens) +
+      kpiCard('% Cumplimiento del mes',
+              pctMens != null ? pctMens.toFixed(1) + '%' : '0%',
+              meta?.mensual
+                ? `${fmtM(totalMes)} de ${fmtM(meta.mensual)}${meta.provisional ? ' · Meta Provisional' : ''}`
+                : 'Meta mensual: Por definir',
+              pctMens == null ? '#999' : pctMens >= 100 ? '#0d8a55' : pctMens >= 60 ? '#b86e00' : '#c0391b',
+              pctMens, minimaNote);
+
+  } else if (currentView === 'asesores') {
+    // Fila superior de KPIs eliminada — la vista de Asesores solo muestra el listado individual.
+    grid.innerHTML = '';
+    grid.style.display = 'none';
+  }
+}
+
+/* ─── BUCKETS ────────────────────────────────────── */
+function renderBuckets() {
+  const section = document.getElementById('bucket-section');
+  const title   = document.getElementById('bucket-title');
+  const grid    = document.getElementById('bucket-grid');
+
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+
+  // Mensual usa su propio contenedor dentro de view-mensual
+  if (currentView === 'mensual') {
+    section.style.display = 'none';
+    const mesTitle = document.getElementById('mes-bucket-title');
+    const mesGrid  = document.getElementById('mes-bucket-grid');
+    if (!mesGrid) return;
+
+    const currMonthRows = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+    });
+    const byB = {};
+    BUCKETS.forEach(b => { byB[b.key] = 0; });
+    currMonthRows.forEach(r => {
+      const estado = String(r[COL_ESTADO]||'').trim();
+      if (byB[estado] !== undefined) byB[estado] += parseNum(r['VALOR']);
+    });
+    if (mesTitle) mesTitle.textContent = 'Distribución por rango de mora — mes en curso';
+    mesGrid.innerHTML = '';
+    BUCKETS.forEach(b => {
+      const metaF      = getMetaFranja(b.key, todayY);
+      const metaTarget = metaF?.mensual || null;
+      mesGrid.innerHTML += bucketCard(b, byB[b.key], metaTarget, 'mensual');
+    });
+    return;
+  }
+
+  if (currentView === 'asesores') { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  grid.innerHTML = '';
+
+  if (currentView === 'diario') {
+    // Calcular dCorte: último día con datos registrados (mismo que en renderKPIs)
+    const currMonthRows = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+    });
+    const fechasCorriente = currMonthRows.map(r => parseDate(r['Fecha de ingreso'])).filter(Boolean);
+    const dCorte = fechasCorriente.length
+      ? new Date(Math.max(...fechasCorriente.map(d => d.getTime()))).getDate()
+      : todayY - 1;
+
+    // Filtrar únicamente las filas del día de corte ("ayer")
+    const ayerRows = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === todayY && d.getMonth() === todayM && d.getDate() === dCorte;
+    });
+    const byB = {};
+    BUCKETS.forEach(b => { byB[b.key] = 0; });
+    ayerRows.forEach(r => {
+      const estado = String(r[COL_ESTADO]||'').trim();
+      if (byB[estado] !== undefined) byB[estado] += parseNum(r['VALOR']);
+    });
+    title.textContent = `Distribución por rango de mora — recaudo del día ${dCorte}`;
+    BUCKETS.forEach(b => {
+      const metaF      = getMetaFranja(b.key, todayY);
+      const metaTarget = metaF?.diaria || null;
+      grid.innerHTML += bucketCard(b, byB[b.key], metaTarget, 'diaria');
+    });
+
+  } else if (currentView === 'semanal') {
+    const currSN = sprintOfMonth(today.getDate());
+    const sprintRanges = ['1–10', '11–20', `21–${new Date(todayY, todayM+1,0).getDate()}`];
+    title.textContent = `Distribución por rango de mora — Sprint ${currSN} (días ${sprintRanges[currSN-1]})`;
+    const sb = {};
+    BUCKETS.forEach(b => { sb[b.key] = 0; });
+    allRows.forEach(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      if (!d || d.getFullYear()!==todayY || d.getMonth()!==todayM) return;
+      if (sprintOfMonth(d.getDate()) !== currSN) return;
+      const estado = String(r[COL_ESTADO]||'').trim();
+      if (sb[estado] !== undefined) sb[estado] += parseNum(r['VALOR']);
+    });
+    BUCKETS.forEach(b => {
+      const metaF      = getMetaFranja(b.key, todayY);
+      const metaTarget = metaF?.semanal || null;
+      grid.innerHTML += bucketCard(b, sb[b.key], metaTarget, 'sprint');
+    });
+  }
+}
+
+function bucketCard(b, val, metaTarget, metaLabel) {
+  const cumplPct  = metaTarget ? (val / metaTarget * 100) : null;
+  const barColor  = cumplPct == null ? '#ddd' : cumplPct >= 100 ? '#0d8a55' : cumplPct >= 60 ? '#e5a020' : '#d85a30';
+  const pctLabel  = cumplPct != null ? `${cumplPct.toFixed(0)}% de ${fmtM(metaTarget)}` : `Meta ${metaLabel||''} por definir`;
+  return `<div class="bucket" style="border-left-color:${b.color}">
+    <div class="bucket-name" style="color:${b.color}">${b.label}</div>
+    <div class="bucket-val">${fmtM(val)}</div>
+    <div class="pbar" style="margin-top:10px"><div class="pfill" style="width:${Math.min(cumplPct||0,100)}%;background:${barColor}"></div></div>
+    <div class="bucket-pct" style="margin-top:6px;font-weight:600;color:${cumplPct==null?'#bbb':barColor}">${pctLabel}</div>
+  </div>`;
+}
+
+/* ─── CHART HELPERS ──────────────────────────────── */
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+/* ─── DIARIO: últimos 10 días ────────────────────── */
+function renderDiario() {
+  destroyChart('diario');
+  const today = new Date();
+  today.setHours(23,59,59,999);
+
+  // Build last-10-days list
+  const days = [];
+  for (let i = 9; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    d.setHours(0,0,0,0);
+    days.push(d);
+  }
+
+  const byDay = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    byDay[key] = (byDay[key] || 0) + parseNum(r['VALOR']);
+  });
+
+  const labels = days.map(d => fmtDateShort(d));
+  const vals   = days.map(d => {
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    return +((byDay[key] || 0) / 1_000_000).toFixed(3);
+  });
+
+  // Promedio diario del mes en curso
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+  const currMonthRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+  });
+  const byDayMes = {};
+  currMonthRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    byDayMes[d.getDate()] = (byDayMes[d.getDate()] || 0) + parseNum(r['VALOR']);
+  });
+  const diasAct = Object.keys(byDayMes).length;
+  const totalMes = currMonthRows.reduce((s,r) => s+parseNum(r['VALOR']),0);
+  const promDia  = diasAct > 0 ? totalMes / diasAct / 1_000_000 : 0;
+
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const bgColors = days.map(d => {
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    return key === todayKey ? '#1D9E75' : '#9FE1CB';
+  });
+  const maxY = Math.ceil(Math.max(...vals, promDia) * 1.3) || 1;
+
+  charts['diario'] = new Chart(document.getElementById('chart-diario'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: vals, backgroundColor: bgColors, borderRadius: 5,
+          datalabels: {
+            display: vals.map(v => v > 0),
+            anchor: 'end', align: 'end', color: '#555',
+            font: { size: 10, weight: '600' },
+            formatter: v => v > 0 ? fmtChart(v) : '',
+          }
+        },
+        {
+          type: 'line',
+          data: days.map(() => +promDia.toFixed(3)),
+          borderColor: '#b86e00', borderWidth: 1.5, borderDash: [4,3],
+          pointRadius: 0, fill: false,
+          datalabels: { display: false },
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 24 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {},
+        tooltip: {
+          callbacks: {
+            title: items => labels[items[0].dataIndex],
+            label: c => c.datasetIndex === 1 ? ` Prom. mes: ${fmtChart(c.parsed.y)}` : ` ${fmtChart(c.parsed.y)}`,
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#999', font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { color: '#bbb', font: { size: 11 }, callback: v => fmtAxis(v) },
+             grid: { color: 'rgba(0,0,0,.04)' }, min: 0, max: maxY }
+      }
+    }
+  });
+}
+
+/* ─── DIARIO ACUMULADO: progreso mes en curso ────── */
+function renderDiarioAcumulado() {
+  destroyChart('diario-acum');
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth(), todayD = today.getDate();
+  const lastDay = new Date(todayY, todayM + 1, 0).getDate();
+
+  // Sum by day for current month
+  const byDay = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d || d.getFullYear() !== todayY || d.getMonth() !== todayM) return;
+    const day = d.getDate();
+    byDay[day] = (byDay[day] || 0) + parseNum(r['VALOR']);
+  });
+
+  // Build cumulative series for all days 1..lastDay
+  const labels = [], cumVals = [], pointColors = [], pointRadii = [];
+  let running = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    labels.push(''+day);
+    if (day <= todayD) {
+      running += byDay[day] || 0;
+      cumVals.push(+(running / 1_000_000).toFixed(6));
+      pointColors.push(day === todayD ? '#1D9E75' : '#5DCAA5');
+      pointRadii.push(day === todayD ? 5 : 2);
+    } else {
+      cumVals.push(null); // future days = no line
+      pointColors.push('transparent');
+      pointRadii.push(0);
+    }
+  }
+
+  const meta    = getMeta(todayY, todayM);
+  const metaVal = meta?.mensual ? +(meta.mensual / 1_000_000).toFixed(6) : null;
+  const esProvisional = meta?.provisional === true;
+  const totalAcum = running;
+
+  // Update subtitle
+  const sub = document.getElementById('diario-acum-sub');
+  if (sub) {
+    const pct = metaVal && meta.mensual > 0 ? (totalAcum / meta.mensual * 100).toFixed(1) : null;
+    const metaLabel = esProvisional ? `Meta mensual (Provisional): ${fmtM(meta.mensual)}` : `Meta mensual: ${fmtM(meta.mensual)}`;
+    sub.textContent = pct
+      ? `Acumulado: ${fmtM(totalAcum)} · ${pct}% completado al día ${todayD} · ${metaLabel}`
+      : `Acumulado: ${fmtM(totalAcum)} al día ${todayD} · Meta mensual: por definir`;
+  }
+
+  const maxY = metaVal
+    ? Math.max(metaVal * 1.1, (Math.max(...cumVals.filter(v=>v!=null)) || 0) * 1.1)
+    : (Math.max(...cumVals.filter(v=>v!=null)) || 1) * 1.3;
+
+  const datasets = [
+    {
+      type: 'line',
+      label: 'Recaudo acumulado',
+      data: cumVals,
+      borderColor: '#1D9E75',
+      borderWidth: 2.5,
+      fill: true,
+      backgroundColor: 'rgba(29,158,117,.08)',
+      pointBackgroundColor: pointColors,
+      pointRadius: pointRadii,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      spanGaps: false,
+      datalabels: { display: false },
+    }
+  ];
+
+  if (metaVal) {
+    datasets.push({
+      type: 'line',
+      label: 'Meta mensual',
+      data: labels.map(() => metaVal),
+      borderColor: '#b86e00',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false,
+      datalabels: {
+        display: (_, idx) => idx === lastDay - 1,
+        anchor: 'end', align: 'left',
+        color: '#b86e00', font: { size: 10, weight: '700' },
+        formatter: () => esProvisional ? `Meta ${fmtM(meta.mensual)} (Provisional)` : `Meta ${fmtM(meta.mensual)}`,
+      }
+    });
+  }
+
+  charts['diario-acum'] = new Chart(document.getElementById('chart-diario-acum'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16, right: metaVal ? 90 : 16 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {},
+        tooltip: {
+          mode: 'index', intersect: false,
+          filter: item => item.parsed.y !== null,
+          callbacks: {
+            title: items => `Día ${items[0].label} de ${MESES[todayM]}`,
+            label: c => {
+              if (c.datasetIndex === 1) return ` Meta: ${fmtM(meta.mensual)}`;
+              return ` Acumulado: ${fmtM(c.parsed.y * 1_000_000)}`;
+            },
+            afterLabel: items => {
+              if (items.datasetIndex !== 0 || !metaVal) return '';
+              const pct = (items.parsed.y / metaVal * 100).toFixed(1);
+              return ` ${pct}% de la meta`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#999', font: { size: 10 }, maxTicksLimit: 15 },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: '#bbb', font: { size: 11 }, callback: v => fmtAxis(v) },
+          grid: { color: 'rgba(0,0,0,.04)' },
+          min: 0, max: +maxY.toFixed(3)
+        }
+      }
+    }
+  });
+}
+
+/* ─── SPRINTS: 3 periodos fijos por mes (1-10, 11-20, 21-fin) ─── */
+function sprintOfMonth(day) {
+  if (day <= 10) return 1;
+  if (day <= 20) return 2;
+  return 3;
+}
+// Alias para compatibilidad con código heredado
+function weekOfMonth(day) { return sprintOfMonth(day); }
+
+function renderSemanal() {
+  destroyChart('semanal');
+
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+  const currSN = sprintOfMonth(today.getDate()); // sprint actual (1, 2 o 3)
+
+  // Meses presentes en los datos, ordenados cronológicamente
+  const monthSet = new Set();
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (d) monthSet.add(`${d.getFullYear()}-${d.getMonth()}`);
+  });
+  const months = [...monthSet]
+    .map(k => { const [y, m] = k.split('-'); return { year:+y, month:+m }; })
+    .sort((a,b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+
+  // Acumular [mes][sprint 1-3]
+  const data = {};
+  months.forEach(({ year, month }) => { data[`${year}-${month}`] = [0, 0, 0]; });
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const sn  = sprintOfMonth(d.getDate()) - 1; // 0-indexed
+    if (data[key]) data[key][sn] += parseNum(r['VALOR']);
+  });
+
+  const SPRINT_LABELS = ['Sprint 1\n(1–10)', 'Sprint 2\n(11–20)', 'Sprint 3\n(21–fin)'];
+
+  const palette = ['#C8EDE2', '#9FE1CB', '#5DCAA5', '#1D9E75', '#0d6b47'];
+  const colorFor = idx => palette[Math.min(idx, palette.length - 1)];
+
+  const datasets = months.map(({ year, month }, mi) => {
+    const key    = `${year}-${month}`;
+    const vals   = data[key].map(v => +(v / 1_000_000).toFixed(3));
+    const isCurr = year === todayY && month === todayM;
+    return {
+      label: `${MESES_CORTO[month]} ${year}`,
+      data:  vals,
+      backgroundColor: colorFor(mi),
+      borderColor: isCurr ? '#0d6b47' : 'transparent',
+      borderWidth: isCurr ? 1.5 : 0,
+      borderRadius: 5,
+      datalabels: {
+        display: vals.map(v => v > 0 && isCurr),
+        anchor: 'end', align: 'end',
+        color: '#0d6b47', font: { size: 9, weight: '700' },
+        formatter: v => v > 0 ? fmtChart(v) : '',
+      }
+    };
+  });
+
+  // Fondo destacado para el sprint en curso
+  const currSprintPlugin = {
+    id: 'currSprintBg',
+    beforeDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (currSN < 1) return;
+      let minX = Infinity, maxX = -Infinity;
+      datasets.forEach((_, di) => {
+        const bar = chart.getDatasetMeta(di).data[currSN - 1];
+        if (bar) { const hw = (bar.width||20)/2; minX = Math.min(minX, bar.x-hw-4); maxX = Math.max(maxX, bar.x+hw+4); }
+      });
+      if (minX === Infinity) return;
+      ctx.save();
+      ctx.fillStyle = 'rgba(29,158,117,.07)';
+      ctx.fillRect(minX, chartArea.top, maxX - minX, chartArea.bottom - chartArea.top);
+      ctx.restore();
+    }
+  };
+
+  const allVals = datasets.flatMap(ds => ds.data);
+  const maxY    = Math.ceil(Math.max(...allVals, 0) * 1.35) || 1;
+
+  charts['semanal'] = new Chart(document.getElementById('chart-semanal'), {
+    type: 'bar',
+    data: { labels: SPRINT_LABELS, datasets },
+    plugins: [currSprintPlugin],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 28 } },
+      plugins: {
+        legend: {
+          display: true, position: 'bottom',
+          labels: { color: '#888', font: { size: 11 }, boxWidth: 12, boxHeight: 12, padding: 16 }
+        },
+        datalabels: {},
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            title: items => {
+              const sn = items[0].dataIndex + 1;
+              const ranges = ['días 1–10', 'días 11–20', 'días 21–fin de mes'];
+              return `Sprint ${sn} (${ranges[sn - 1]})`;
+            },
+            label: c => { const v = c.parsed.y; return v > 0 ? ` ${c.dataset.label}: ${fmtChart(v)}` : null; },
+            footer: items => { const t = items.reduce((s,i)=>s+i.parsed.y,0); return t>0?` Total: ${fmtChart(t)}`:''; }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#888', font: { size: 11 } }, grid: { display: false } },
+        y: {
+          ticks: { color: '#bbb', font: { size: 11 }, callback: v => fmtAxis(v) },
+          grid: { color: 'rgba(0,0,0,.04)' }, min: 0, max: maxY
+        }
+      }
+    }
+  });
+}
+
+/* ─── MENSUAL: todas las meses apilados ──────────── */
+function renderMensual() {
+  destroyChart('mensual');
+
+  // Group by month with bucket breakdown
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+  const byMonthMap = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!byMonthMap[key]) {
+      byMonthMap[key] = { year:d.getFullYear(), month:d.getMonth(), val:0, txn:0,
+                          buckets: Object.fromEntries(BUCKETS.map(b=>[b.key,0])) };
+    }
+    const val    = parseNum(r['VALOR']);
+    const estado = String(r[COL_ESTADO]||'').trim();
+    byMonthMap[key].val += val;
+    byMonthMap[key].txn++;
+    if (byMonthMap[key].buckets[estado] !== undefined) byMonthMap[key].buckets[estado] += val;
+  });
+
+  const sorted = Object.values(byMonthMap).sort((a,b) =>
+    a.year !== b.year ? a.year-b.year : a.month-b.month
+  );
+
+  // Cards
+  const maxVal = Math.max(...sorted.map(m=>m.val),1);
+  const cards  = document.getElementById('mes-cards');
+  cards.innerHTML = '';
+  sorted.forEach((m, i) => {
+    const prev  = i > 0 ? sorted[i-1] : null;
+    const delta = prev && prev.val>0 ? ((m.val-prev.val)/prev.val*100) : null;
+    const isCurr = m.year===todayY && m.month===todayM;
+    const dH   = delta!=null ? `<div class="mes-delta" style="color:${delta>=0?'#0d8a55':'#c0391b'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(1)}%</div>` : '';
+    cards.innerHTML += `
+      <div class="mes-card ${isCurr?'active-mes':''}">
+        <div class="mes-label">${MESES_CORTO[m.month].toUpperCase()} ${m.year}</div>
+        <div class="mes-val">${fmtM(m.val)}</div>
+        <div class="mes-txn">${m.txn} pagos</div>
+        ${dH}
+        <div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${(m.val/maxVal*100).toFixed(1)}%;background:#1D9E75"></div></div>
+      </div>`;
+  });
+
+  // Legend
+  document.getElementById('mensual-legend').innerHTML =
+    BUCKETS.map(b=>`<span class="li"><span class="lsq" style="background:${b.color}"></span>${b.label}</span>`).join('');
+
+  const labels   = sorted.map(m => MESES_CORTO[m.month]+" '"+String(m.year).slice(2));
+  const totals   = sorted.map(m => m.val);
+  const maxTotal = Math.max(...totals, 1);
+  const datasets = BUCKETS.map((b,bi) => ({
+    label: b.label,
+    data:  sorted.map(m => +((m.buckets[b.key]||0)/1_000_000).toFixed(3)),
+    backgroundColor: b.color,
+    stack: 'mora',
+    borderRadius: bi===BUCKETS.length-1 ? { topLeft:4, topRight:4 } : 0,
+    borderSkipped: false,
+    datalabels: { display: false },
+  }));
+  const maxY = Math.ceil(maxTotal/1_000_000*1.3) || 1;
+
+  const totalLabelsPlugin = {
+    id: 'mensualTotals',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales } = chart;
+      const lastMeta = chart.getDatasetMeta(BUCKETS.length-1);
+      ctx.save();
+      ctx.font = '600 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+      ctx.fillStyle = '#444'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      lastMeta.data.forEach((bar, i) => {
+        const total = datasets.reduce((s,ds) => s+(ds.data[i]||0), 0);
+        if (total <= 0) return;
+        const stackTop = scales.y.getPixelForValue(
+          datasets.reduce((s,ds) => s+(ds.data[i]||0), 0)
+        );
+        ctx.fillText(fmtChart(total), bar.x, stackTop-4);
+      });
+      ctx.restore();
+    }
+  };
+
+  charts['mensual'] = new Chart(document.getElementById('chart-mensual'), {
+    type: 'bar',
+    data: { labels, datasets },
+    plugins: [totalLabelsPlugin],
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            label: c => ` ${c.dataset.label}: ${fmtM(c.parsed.y*1_000_000)}`,
+            footer: items => ` Total: ${fmtM(items.reduce((s,i)=>s+i.parsed.y,0)*1_000_000)}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked:true, ticks:{ color:'#999', font:{size:11} }, grid:{display:false} },
+        y: { stacked:true, ticks:{ color:'#bbb', font:{size:11}, callback:v=>fmtAxis(v) },
+             grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxY }
+      }
+    }
+  });
+}
+
+/* ─── ASESORES: mes en curso ─────────────────────── */
+function renderAsesores() {
+  destroyChart('asesores');
+  const today = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+
+  const currMonthRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear()===todayY && d.getMonth()===todayM;
+  });
+  const allAsesores = [...new Set(allRows.map(r=>String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
+  const byAsesor    = {};
+  allAsesores.forEach(a => { byAsesor[a] = { val:0, txn:0 }; });
+  currMonthRows.forEach(r => {
+    const a = String(r[COL_ASESOR]||'').trim();
+    if (!a||a==='#N/D') return;
+    byAsesor[a].val += parseNum(r['VALOR']);
+    byAsesor[a].txn++;
+  });
+  const asesores = Object.entries(byAsesor).map(([name,d])=>({name,...d})).sort((a,b)=>b.val-a.val);
+  const totalGen  = asesores.reduce((s,a)=>s+a.val,0);
+
+  // Meta individual = fila "Meta Asesor Mensual" del Sheet "Metas" (valor fijo, no se divide entre asesores)
+  const metaInd = metaAsesorMensual || null;
+
+  // Cards
+  const cards = document.getElementById('asesor-cards');
+  cards.innerHTML = '';
+  asesores.forEach((a,i) => {
+    const pctEquipo = totalGen > 0 ? (a.val / totalGen * 100) : 0;
+    const pctMeta   = metaInd && metaInd > 0 ? Math.min(a.val / metaInd * 100, 999) : null;
+    const barPct    = pctMeta != null ? Math.min(pctMeta, 100) : pctEquipo;
+    const barColor  = pctMeta == null ? '#9FE1CB'
+                    : pctMeta >= 100  ? '#1D9E75'
+                    : pctMeta >= 60   ? '#EF9F27' : '#D85A30';
+    const badgeClass = pctMeta == null ? 'mid'
+                     : pctMeta >= 100  ? 'ok'
+                     : pctMeta >= 60   ? 'mid' : 'low';
+    const badgeText  = pctMeta != null ? pctMeta.toFixed(0)+'% meta'
+                     : pctEquipo.toFixed(0)+'% equipo';
+    cards.innerHTML += `
+      <div class="asesor-card${i===0&&a.val>0?' leader':''}">
+        <div class="asesor-name" title="${a.name}">${i+1}. ${a.name}</div>
+        <div class="asesor-val">${a.val > 0 ? fmtM(a.val) : '—'}</div>
+        <div class="asesor-meta-row">
+          <span class="asesor-clientes" style="margin:0">${a.txn > 0 ? a.txn+' pagos' : 'Sin actividad'}</span>
+          ${a.val > 0 ? `<span class="asesor-pct-badge ${badgeClass}">${badgeText}</span>` : ''}
+        </div>
+        <div class="asesor-pbar">
+          <div class="asesor-pfill" style="width:${Math.max(barPct,0).toFixed(1)}%;background:${barColor}"></div>
+        </div>
+      </div>`;
+  });
+
+  if (!asesores.length) return;
+  const maxV    = Math.max(...asesores.map(a=>a.val/1_000_000))*1.3||1;
+  const palette = ['#1D9E75','#5DCAA5','#7ED2B8','#9FE1CB','#B5EAD7'];
+
+  charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
+    type: 'bar',
+    data: {
+      labels: asesores.map(a=>a.name),
+      datasets: [{
+        data: asesores.map(a=>+(a.val/1_000_000).toFixed(3)),
+        backgroundColor: asesores.map((_,i)=>palette[i%palette.length]),
+        borderRadius: 5,
+        datalabels: {
+          display: true, anchor:'end', align:'end', color:'#444',
+          font:{ size:11, weight:'600' }, clip:false,
+          formatter: v => v>0?fmtChart(v):'—',
+        }
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{ padding:{ right:60 } },
+      plugins: {
+        legend:{display:false}, datalabels:{},
+        tooltip:{ callbacks:{ label:c=>` ${fmtM(c.parsed.x*1_000_000)}` } }
+      },
+      scales: {
+        x:{ ticks:{color:'#bbb',font:{size:11},callback:v=>fmtAxis(v)}, grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxV },
+        y:{ ticks:{color:'#444',font:{size:11}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+/* ─── TRANSICIÓN ─────────────────────────────────── */
+const TRANS_ITEMS = [
+  { id: 'oficina',    nombre: 'Oficina',                      nota: 'Tentativo hasta el 15 de julio', responsable: 'Por asignar', pct: 0 },
+  { id: 'contrato',   nombre: 'Contrato administración',      nota: '',                               responsable: 'Por asignar', pct: 0 },
+  { id: 'transunion', nombre: 'Transunión',                   nota: '',                               responsable: 'Por asignar', pct: 0 },
+  { id: 'voximplant', nombre: 'Voximplant',                   nota: '',                               responsable: 'Por asignar', pct: 0 },
+  { id: 'equipos',    nombre: 'Transferencia de equipos y herramientas', nota: '',                    responsable: 'Por asignar', pct: 0 },
+  { id: 'contable',   nombre: 'Proceso contable',             nota: '',                               responsable: 'Por asignar', pct: 0 },
+];
+
+function semaforo(pct) {
+  if (pct === 100) return { cls: 'green',  dot: 'green',  label: 'Completado' };
+  if (pct >= 80)   return { cls: 'teal',   dot: 'teal',   label: 'Casi listo'  };
+  if (pct >= 26)   return { cls: 'yellow', dot: 'yellow', label: 'En progreso' };
+  if (pct > 0)     return { cls: 'red',    dot: 'red',    label: 'Detenido'    };
+  return             { cls: 'gray',   dot: 'gray',   label: 'Sin iniciar' };
+}
+
+function barColor(pct) {
+  if (pct === 100) return '#1D9E75';
+  if (pct >= 80)   return '#5DCAA5';
+  if (pct >= 26)   return '#e5a020';
+  if (pct > 0)     return '#c0391b';
+  return '#d0d0d0';
+}
+
+let transEditOpen = null;
+
+function renderTransicion() {
+  const container = document.getElementById('trans-rows');
+  if (!container) return;
+
+  // Actualizar encabezado de columnas para incluir Observaciones
+  const colHead = document.querySelector('.trans-col-head');
+  if (colHead) {
+    colHead.style.gridTemplateColumns = '1fr 140px 190px 110px 1fr';
+    colHead.innerHTML = '<span>Tema</span><span>Responsable</span><span style="text-align:center">Avance</span><span style="text-align:center">Estado</span><span>Observaciones</span>';
+  }
+
+  const totalPct = Math.round(TRANS_ITEMS.reduce((s, i) => s + i.pct, 0) / TRANS_ITEMS.length);
+  const totalSem = semaforo(totalPct);
+  const srcLabel = CONFIG.TRANS_GID
+    ? '<span style="font-size:10px;color:#1D9E75;margin-top:4px;display:block">● Conectado a Google Sheets</span>'
+    : '<span style="font-size:10px;color:#e5a020;margin-top:4px;display:block">● Edición local · conecta el Sheet para persistir</span>';
+  document.getElementById('trans-overall').innerHTML = `
+    <div class="trans-overall-pct" style="color:${barColor(totalPct)}">${totalPct}%</div>
+    <div class="trans-overall-lbl">avance general</div>
+    ${srcLabel}`;
+
+  container.innerHTML = TRANS_ITEMS.map(item => {
+    const s   = semaforo(item.pct);
+    const col = barColor(item.pct);
+    const obsText = item.obs || '';
+    return `
+    <div class="trans-row" id="row-${item.id}" style="grid-template-columns:1fr 140px 190px 110px 1fr" onclick="toggleTransEdit('${item.id}')">
+      <div>
+        <div class="trans-name">${item.nombre}</div>
+        ${item.nota ? `<div class="trans-note">⚠ ${item.nota}</div>` : ''}
+      </div>
+      <div class="trans-resp" id="resp-${item.id}">${item.responsable || 'Por asignar'}</div>
+      <div class="trans-pbar-wrap">
+        <div class="trans-pbar"><div class="trans-pfill" id="fill-${item.id}" style="width:${item.pct}%;background:${col}"></div></div>
+        <span class="trans-pct-lbl" id="lbl-${item.id}" style="color:${col}">${item.pct}%</span>
+      </div>
+      <div><span class="trans-badge ${s.cls}"><span class="trans-dot ${s.dot}"></span>${s.label}</span></div>
+      <div class="trans-obs" id="obs-${item.id}">${obsText ? obsText : '<span style="color:#ccc;font-style:italic">Sin observaciones</span>'}</div>
+    </div>
+    <div class="trans-editor" id="editor-${item.id}">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 20px 14px;background:#f9fdfb;border-top:1px dashed #e8e8e8">
+        <label style="font-size:11px;color:#888;white-space:nowrap;font-weight:600">Avance:</label>
+        <input type="range" class="trans-slider" min="0" max="100" step="5" value="${item.pct}"
+          style="width:160px"
+          oninput="updateTransPct('${item.id}', this.value)"
+          onclick="event.stopPropagation()">
+        <span style="font-size:13px;font-weight:700;min-width:36px;color:${col}" id="slide-lbl-${item.id}">${item.pct}%</span>
+        <label style="font-size:11px;color:#888;white-space:nowrap;font-weight:600;margin-left:8px">Responsable:</label>
+        <input type="text" value="${item.responsable || ''}" placeholder="Nombre del responsable"
+          style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:12px;width:160px"
+          oninput="updateTransResp('${item.id}', this.value)"
+          onclick="event.stopPropagation()">
+        <label style="font-size:11px;color:#888;white-space:nowrap;font-weight:600;margin-left:8px">Observaciones:</label>
+        <input type="text" value="${item.obs || ''}" placeholder="Escribe una nota o comentario…"
+          style="border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:12px;flex:1;min-width:200px"
+          oninput="updateTransObs('${item.id}', this.value)"
+          onclick="event.stopPropagation()">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTransEdit(id) {
+  if (transEditOpen && transEditOpen !== id) {
+    document.getElementById('editor-' + transEditOpen).classList.remove('open');
+    document.getElementById('row-'    + transEditOpen).classList.remove('editing');
+  }
+  const editor = document.getElementById('editor-' + id);
+  const row    = document.getElementById('row-'    + id);
+  const isOpen = editor.classList.contains('open');
+  editor.classList.toggle('open', !isOpen);
+  row.classList.toggle('editing', !isOpen);
+  transEditOpen = isOpen ? null : id;
+}
+
+function updateTransPct(id, val) {
+  const item = TRANS_ITEMS.find(i => i.id === id);
+  if (!item) return;
+  item.pct = +val;
+  const col = barColor(item.pct);
+  const s   = semaforo(item.pct);
+  document.getElementById('fill-'     + id).style.width      = val + '%';
+  document.getElementById('fill-'     + id).style.background = col;
+  document.getElementById('lbl-'      + id).textContent      = val + '%';
+  document.getElementById('lbl-'      + id).style.color      = col;
+  document.getElementById('slide-lbl-'+ id).textContent      = val + '%';
+  document.getElementById('slide-lbl-'+ id).style.color      = col;
+  // update badge
+  const row  = document.getElementById('row-' + id);
+  const badge = row.querySelector('.trans-badge');
+  badge.className = 'trans-badge ' + s.cls;
+  badge.innerHTML = `<span class="trans-dot ${s.dot}"></span>${s.label}`;
+  // update overall
+  const totalPct = Math.round(TRANS_ITEMS.reduce((s,i) => s+i.pct, 0) / TRANS_ITEMS.length);
+  const overallCol = barColor(totalPct);
+  document.getElementById('trans-overall').innerHTML = `
+    <div class="trans-overall-pct" style="color:${overallCol}">${totalPct}%</div>
+    <div class="trans-overall-lbl">avance general</div>`;
+}
+
+function updateTransResp(id, val) {
+  const item = TRANS_ITEMS.find(i => i.id === id);
+  if (item) item.responsable = val;
+  const el = document.getElementById('resp-' + id);
+  if (el) el.textContent = val || 'Por asignar';
+}
+
+function updateTransObs(id, val) {
+  const item = TRANS_ITEMS.find(i => i.id === id);
+  if (item) item.obs = val;
+  const el = document.getElementById('obs-' + id);
+  if (el) el.innerHTML = val ? val : '<span style="color:#ccc;font-style:italic">Sin observaciones</span>';
+}
+
+/* ─── NAVEGACIÓN ─────────────────────────────────── */
+const CARTERA_ELS = ['metas-banner', 'kpi-grid', 'bucket-section'];
+
+function switchView(name, btn) {
+  currentView = name;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-'+name).classList.add('active');
+
+  const isTransicion = name === 'transicion';
+  const isMensual    = name === 'mensual';
+  CARTERA_ELS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (isTransicion || isMensual) ? 'none' : '';
+  });
+
+  if (isTransicion) { loadTransicion(); return; } // loadTransicion llama renderTransicion al terminar
+  if (lastRendered) { renderKPIs(); renderBuckets(); }
+}
+
+/* ─── TRANSICIÓN: carga desde Sheets ─────────────── */
+let transSheetRows = null; // null = no cargado aún, [] = cargado (puede estar vacío)
+
+function loadTransicion() {
+  if (!CONFIG.TRANS_GID) return;
+  const old = document.getElementById('script-trans');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-trans';
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onTransData&gid=${CONFIG.TRANS_GID}&_=${Date.now()}`;
+  s.onerror = () => { transSheetRows = []; renderTransicion(); };
+  document.head.appendChild(s);
+}
+
+function onTransData(resp) {
+  if (resp.status !== 'ok') { transSheetRows = []; renderTransicion(); return; }
+
+  const cols  = resp.table.cols.map(c => c.label.trim().toLowerCase());
+  const iCol  = k => cols.findIndex(c => c.includes(k));
+  const colTema = iCol('tema');
+  const colSub  = iCol('subtit') >= 0 ? iCol('subtit') : iCol('sub');
+  const colPct  = iCol('porcen') >= 0 ? iCol('porcen') : iCol('avance') >= 0 ? iCol('avance') : iCol('%');
+  const colResp = iCol('responsable');
+  const colNota = iCol('observ') >= 0 ? iCol('observ') : iCol('nota');
+
+  const parsePct = v => {
+    const n = +(v || 0);
+    // El Sheet guarda 80% como 0.8 (formato %) o como 80 (número entero)
+    return Math.min(100, Math.max(0, n > 0 && n <= 1 ? Math.round(n * 100) : Math.round(n)));
+  };
+
+  // Leer TODAS las filas dinámicamente — sin límite fijo
+  transSheetRows = resp.table.rows
+    .map(r => {
+      const c = r.c || [];
+      return {
+        id:          Math.random().toString(36).slice(2),
+        nombre:      String(c[colTema]?.v || '').trim(),
+        nota:        colSub  >= 0 ? String(c[colSub]?.v  || '').trim() : '',
+        pct:         colPct  >= 0 ? parsePct(c[colPct]?.v) : 0,
+        responsable: colResp >= 0 ? String(c[colResp]?.v || '').trim() : '',
+        obs:         colNota >= 0 ? String(c[colNota]?.v || '').trim() : '',
+      };
+    })
+    .filter(r => r.nombre); // ignorar filas vacías
+
+  // Reemplazar TRANS_ITEMS completo con los datos del Sheet
+  TRANS_ITEMS.length = 0;
+  transSheetRows.forEach(r => TRANS_ITEMS.push(r));
+
+  if (document.getElementById('view-transicion').classList.contains('active')) renderTransicion();
+}
+
+/* ─── INICIO ─────────────────────────────────────── */
+loadData();
+loadMetas();
+loadTransicion();
+startAutoRefresh();
+</script>
+</body>
+</html>
