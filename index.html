@@ -78,13 +78,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .asesor-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; }
 .asesor-card.leader { border-color: #1D9E75; box-shadow: 0 0 0 1px #1D9E7530; }
 .asesor-name { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: .4px; }
-.asesor-val  { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 2px; line-height: 1.1; }
-.asesor-meta-row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 4px; }
-.asesor-pct-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
-.asesor-pct-badge.ok  { background: #e6f7f1; color: #0d8a55; }
-.asesor-pct-badge.mid { background: #fff4e0; color: #b86e00; }
-.asesor-pct-badge.low { background: #fdecea; color: #c0391b; }
-.asesor-clientes { font-size: 10px; color: #999; margin-bottom: 6px; }
+.asesor-val  { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 10px; line-height: 1.1; }
+.asesor-metarow { margin-top: 10px; }
+.asesor-metarow-txt { font-size: 10px; font-weight: 600; margin-top: 4px; }
 .asesor-pbar { height: 5px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
 .asesor-pfill { height: 100%; border-radius: 3px; transition: width .4s; }
 
@@ -261,8 +257,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="asesor-grid" id="asesor-cards"></div>
       <div class="chart-box">
         <div class="chart-header">
-          <div class="chart-title">Ranking de asesores — mes en curso</div>
-          <div class="chart-sub">Ordenados de mayor a menor recaudo.</div>
+          <div class="chart-title">Ranking de asesores — Meta Semanal</div>
+          <div class="chart-sub">Recaudo del sprint actual de cada asesor frente a su Meta Asesor Semanal (línea punteada).</div>
         </div>
         <div class="chart-wrap" style="height:260px">
           <canvas id="chart-asesores"></canvas>
@@ -273,10 +269,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
-Chart.register(ChartDataLabels);
+// Carga dinámica de Chart.js (en vez de <script src> estático): algunos entornos
+// que reconstruyen la página con document.write (p.ej. el sandbox de Apps Script)
+// rompen con etiquetas <script src> externas fijas en el HTML.
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('No se pudo cargar ' + src));
+    document.head.appendChild(s);
+  });
+}
 
 /* ─── CONFIG ─────────────────────────────────────── */
 const CONFIG = {
@@ -306,6 +311,7 @@ let COL_ASESOR = 'ASESOR QUE REPORTA';
 let metasData  = {};
 let metasFranjaData = {}; // key: `${año}::${bucketKey}` -> { mensual, diaria, semanal }
 let metaAsesorMensual = null; // fila "Meta Asesor Mensual" del Sheet "Metas" (valor único, sin año/mes)
+let metaAsesorSemanal = null; // fila "Meta Asesor Semanal" del Sheet "Metas" (valor único, sin año/mes)
 let currentView = 'diario';
 let lastRendered = null; // snapshot for switchView re-render
 
@@ -442,8 +448,7 @@ function loadMetas() {
   document.head.appendChild(s);
 }
 
-/* ─── AUTO-REFRESH: mantiene el dashboard vivo sin que el usuario recargue ── */
-const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+/* ─── AUTO-REFRESH: recarga los datos automáticamente cada medianoche ── */
 let lastSyncAt = null;
 
 function updateSyncIndicator() {
@@ -451,14 +456,21 @@ function updateSyncIndicator() {
   if (!el || !lastSyncAt) return;
   const hh = String(lastSyncAt.getHours()).padStart(2,'0');
   const mm = String(lastSyncAt.getMinutes()).padStart(2,'0');
-  el.textContent = `● Datos en vivo · última sincronización ${hh}:${mm}`;
+  el.textContent = `● Última actualización ${hh}:${mm} · se refresca automáticamente cada medianoche`;
+}
+
+function msHastaProximaMedianoche() {
+  const ahora = new Date();
+  const proxima = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1, 0, 0, 0, 0);
+  return proxima - ahora;
 }
 
 function startAutoRefresh() {
-  setInterval(() => {
+  setTimeout(function tick() {
     loadData();
     loadMetas();
-  }, AUTO_REFRESH_MS);
+    setTimeout(tick, 24 * 60 * 60 * 1000); // se repite cada 24h a partir de la primera medianoche
+  }, msHastaProximaMedianoche());
 }
 
 // Normaliza el label de franja del Sheet ("1-30 días", "Más 90 días"...) al key de BUCKETS
@@ -489,9 +501,11 @@ function onMetasData(resp) {
     const c        = row.c || [];
     const labelRaw = String(c[colMes]?.v ?? '').trim().toLowerCase();
 
-    // Fila especial "Meta Asesor Mensual" (sin año/mes, valor único en la columna "Meta mensual")
+    // Filas especiales "Meta Asesor Mensual" / "Meta Asesor Semanal" (sin año/mes, valor único en la columna "Meta mensual")
     if (labelRaw.includes('meta asesor')) {
-      metaAsesorMensual = colMens >= 0 ? (parseNum(c[colMens]?.v) || null) : null;
+      const valorAsesor = colMens >= 0 ? (parseNum(c[colMens]?.v) || null) : null;
+      if (labelRaw.includes('semanal')) metaAsesorSemanal = valorAsesor;
+      else metaAsesorMensual = valorAsesor;
       return;
     }
 
@@ -745,7 +759,7 @@ function renderKPIs() {
       prevSnVal       = sprintTotal(todayY, todayM, currSN - 1);
       prevSnCompVal   = sprintTotal(prevYear2, prevMonth2, currSN - 1);
       prevSnTitle     = `Sprint ${currSN-1} de ${MESES[todayM]} (cerrado)`;
-      prevSnSub       = `Sprint ${currSN-1} de ${MESES_CORTO[prevMonth2]}: ${fmtM(prevMoCurrSn)}`;
+      prevSnSub       = `Sprint ${currSN-1} de ${MESES_CORTO[prevMonth2]}: ${fmtM(prevSnCompVal)}`;
       prevSnCompLabel = `Sprint ${currSN-1} de ${MESES_CORTO[prevMonth2]}`;
     } else {
       prevSnVal       = sprintTotal(prevYear2, prevMonth2, 3);
@@ -1373,10 +1387,22 @@ function renderMensual() {
 }
 
 /* ─── ASESORES: mes en curso ─────────────────────── */
+function asesorMetaRow(pct, metaVal, label) {
+  const color = pct == null ? '#ddd' : pct >= 100 ? '#1D9E75' : pct >= 60 ? '#EF9F27' : '#D85A30';
+  const text  = pct != null
+    ? `${pct.toFixed(0)}% ${label} · ${fmtM(metaVal)}`
+    : `${label}: meta por definir`;
+  return `<div class="asesor-metarow">
+    <div class="asesor-pbar"><div class="asesor-pfill" style="width:${Math.min(pct||0,100)}%;background:${color}"></div></div>
+    <div class="asesor-metarow-txt" style="color:${pct==null?'#bbb':color}">${text}</div>
+  </div>`;
+}
+
 function renderAsesores() {
   destroyChart('asesores');
-  const today = new Date();
+  const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
+  const currSN = sprintOfMonth(today.getDate());
 
   const currMonthRows = allRows.filter(r => {
     const d = parseDate(r['Fecha de ingreso']);
@@ -1384,59 +1410,76 @@ function renderAsesores() {
   });
   const allAsesores = [...new Set(allRows.map(r=>String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
   const byAsesor    = {};
-  allAsesores.forEach(a => { byAsesor[a] = { val:0, txn:0 }; });
+  allAsesores.forEach(a => { byAsesor[a] = { valMes:0, valSprint:0 }; });
   currMonthRows.forEach(r => {
     const a = String(r[COL_ASESOR]||'').trim();
     if (!a||a==='#N/D') return;
-    byAsesor[a].val += parseNum(r['VALOR']);
-    byAsesor[a].txn++;
+    const d   = parseDate(r['Fecha de ingreso']);
+    const val = parseNum(r['VALOR']);
+    byAsesor[a].valMes += val;
+    if (d && sprintOfMonth(d.getDate()) === currSN) byAsesor[a].valSprint += val;
   });
-  const asesores = Object.entries(byAsesor).map(([name,d])=>({name,...d})).sort((a,b)=>b.val-a.val);
-  const totalGen  = asesores.reduce((s,a)=>s+a.val,0);
-
-  // Meta individual = fila "Meta Asesor Mensual" del Sheet "Metas" (valor fijo, no se divide entre asesores)
-  const metaInd = metaAsesorMensual || null;
+  const asesores = Object.entries(byAsesor).map(([name,d])=>({name,...d})).sort((a,b)=>b.valMes-a.valMes);
 
   // Cards
   const cards = document.getElementById('asesor-cards');
   cards.innerHTML = '';
   asesores.forEach((a,i) => {
-    const pctEquipo = totalGen > 0 ? (a.val / totalGen * 100) : 0;
-    const pctMeta   = metaInd && metaInd > 0 ? Math.min(a.val / metaInd * 100, 999) : null;
-    const barPct    = pctMeta != null ? Math.min(pctMeta, 100) : pctEquipo;
-    const barColor  = pctMeta == null ? '#9FE1CB'
-                    : pctMeta >= 100  ? '#1D9E75'
-                    : pctMeta >= 60   ? '#EF9F27' : '#D85A30';
-    const badgeClass = pctMeta == null ? 'mid'
-                     : pctMeta >= 100  ? 'ok'
-                     : pctMeta >= 60   ? 'mid' : 'low';
-    const badgeText  = pctMeta != null ? pctMeta.toFixed(0)+'% meta'
-                     : pctEquipo.toFixed(0)+'% equipo';
+    const pctSemanal = metaAsesorSemanal ? (a.valSprint / metaAsesorSemanal * 100) : null;
+    const pctMensual = metaAsesorMensual ? (a.valMes   / metaAsesorMensual * 100) : null;
     cards.innerHTML += `
-      <div class="asesor-card${i===0&&a.val>0?' leader':''}">
+      <div class="asesor-card${i===0&&a.valMes>0?' leader':''}">
         <div class="asesor-name" title="${a.name}">${i+1}. ${a.name}</div>
-        <div class="asesor-val">${a.val > 0 ? fmtM(a.val) : '—'}</div>
-        <div class="asesor-meta-row">
-          <span class="asesor-clientes" style="margin:0">${a.txn > 0 ? a.txn+' pagos' : 'Sin actividad'}</span>
-          ${a.val > 0 ? `<span class="asesor-pct-badge ${badgeClass}">${badgeText}</span>` : ''}
-        </div>
-        <div class="asesor-pbar">
-          <div class="asesor-pfill" style="width:${Math.max(barPct,0).toFixed(1)}%;background:${barColor}"></div>
-        </div>
+        <div class="asesor-val">${a.valMes > 0 ? fmtM(a.valMes) : '—'}</div>
+        ${asesorMetaRow(pctSemanal, metaAsesorSemanal, 'meta s.')}
+        ${asesorMetaRow(pctMensual, metaAsesorMensual, 'meta m.')}
       </div>`;
   });
 
   if (!asesores.length) return;
-  const maxV    = Math.max(...asesores.map(a=>a.val/1_000_000))*1.3||1;
-  const palette = ['#1D9E75','#5DCAA5','#7ED2B8','#9FE1CB','#B5EAD7'];
+
+  // Eje y barras referenciados contra la Meta Asesor Semanal (no el monto plano)
+  const metaSemVal = metaAsesorSemanal ? +(metaAsesorSemanal / 1_000_000).toFixed(3) : null;
+  const maxV = Math.max(...asesores.map(a=>a.valSprint/1_000_000), metaSemVal || 0) * 1.25 || 1;
+
+  const barColor = a => {
+    if (!metaAsesorSemanal) return '#9FE1CB';
+    const pct = a.valSprint / metaAsesorSemanal * 100;
+    return pct >= 100 ? '#1D9E75' : pct >= 60 ? '#EF9F27' : '#D85A30';
+  };
+
+  // Línea punteada vertical marcando la Meta Asesor Semanal sobre las barras
+  const metaSemanalLinePlugin = {
+    id: 'metaSemanalLine',
+    afterDraw(chart) {
+      if (!metaSemVal) return;
+      const { ctx, chartArea, scales } = chart;
+      const x = scales.x.getPixelForValue(metaSemVal);
+      if (x < chartArea.left || x > chartArea.right) return;
+      ctx.save();
+      ctx.strokeStyle = '#b86e00';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#b86e00';
+      ctx.font = '700 10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Meta semanal: ${fmtChart(metaSemVal)}`, x, chartArea.top - 6);
+      ctx.restore();
+    }
+  };
 
   charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
     type: 'bar',
     data: {
       labels: asesores.map(a=>a.name),
       datasets: [{
-        data: asesores.map(a=>+(a.val/1_000_000).toFixed(3)),
-        backgroundColor: asesores.map((_,i)=>palette[i%palette.length]),
+        data: asesores.map(a=>+(a.valSprint/1_000_000).toFixed(3)),
+        backgroundColor: asesores.map(barColor),
         borderRadius: 5,
         datalabels: {
           display: true, anchor:'end', align:'end', color:'#444',
@@ -1445,12 +1488,17 @@ function renderAsesores() {
         }
       }]
     },
+    plugins: [metaSemanalLinePlugin],
     options: {
       responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      layout:{ padding:{ right:60 } },
+      layout:{ padding:{ top:24, right:60 } },
       plugins: {
         legend:{display:false}, datalabels:{},
-        tooltip:{ callbacks:{ label:c=>` ${fmtM(c.parsed.x*1_000_000)}` } }
+        tooltip:{ callbacks:{ label:c=>{
+          const val = c.parsed.x * 1_000_000;
+          const pct = metaAsesorSemanal ? ` · ${(val/metaAsesorSemanal*100).toFixed(0)}% de la meta semanal` : '';
+          return ` ${fmtM(val)}${pct}`;
+        } } }
       },
       scales: {
         x:{ ticks:{color:'#bbb',font:{size:11},callback:v=>fmtAxis(v)}, grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxV },
@@ -1677,10 +1725,16 @@ function onTransData(resp) {
 }
 
 /* ─── INICIO ─────────────────────────────────────── */
-loadData();
-loadMetas();
-loadTransicion();
-startAutoRefresh();
+loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js')
+  .then(() => loadScript('https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js'))
+  .then(() => {
+    Chart.register(ChartDataLabels);
+    loadData();
+    loadMetas();
+    loadTransicion();
+    startAutoRefresh();
+  })
+  .catch(err => showError('No se pudieron cargar las librerías de gráficos (' + err.message + ').'));
 </script>
 </body>
 </html>
