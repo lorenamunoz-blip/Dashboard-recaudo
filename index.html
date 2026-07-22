@@ -84,6 +84,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .asesor-pbar { height: 5px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
 .asesor-pfill { height: 100%; border-radius: 3px; transition: width .4s; }
 
+/* Gestión de asesores */
+.gestion-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.gestion-table th { text-align: left; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .04em; padding: 8px 10px; border-bottom: 2px solid #eee; white-space: nowrap; }
+.gestion-table td { padding: 8px 10px; border-bottom: 1px solid #f2f2f2; color: #333; white-space: nowrap; }
+.gestion-table tr:last-child td { border-bottom: none; }
+.gestion-table td.num, .gestion-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.gestion-table tr.total-row td { font-weight: 700; background: #f9f9f7; border-top: 2px solid #eee; }
+.gestion-select { font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; }
+.gestion-gauge-global-wrap { display: flex; flex-direction: column; align-items: center; }
+.gestion-gauge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px 10px; }
+.gestion-gauge-card { text-align: center; }
+.gestion-gauge-canal { font-size: 11px; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: .03em; }
+.gestion-gauge-franja { font-size: 11px; color: #999; margin-top: 2px; }
+.gestion-gauge-count { font-size: 10px; color: #bbb; }
+@media (max-width: 700px) {
+  .gestion-gauge-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── Transición ── */
 .tab-transicion { border-left: 2px solid #e0e0e0; margin-left: 4px; padding-left: 12px; }
 .trans-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
@@ -257,12 +275,59 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="asesor-grid" id="asesor-cards"></div>
       <div class="chart-box">
         <div class="chart-header">
-          <div class="chart-title">Ranking de asesores — Meta Semanal</div>
-          <div class="chart-sub">Recaudo del sprint actual de cada asesor frente a su Meta Asesor Semanal (línea punteada).</div>
+          <div class="chart-title">Ranking de asesores — Acumulado Mensual</div>
+          <div class="chart-sub">Recaudo acumulado del mes a la fecha por asesor, frente a su Meta Asesor Mensual. Las marcas verticales dentro de cada barra muestran el cierre de cada sprint.</div>
         </div>
         <div class="chart-wrap" style="height:260px">
           <canvas id="chart-asesores"></canvas>
         </div>
+        <div class="legend" id="asesores-legend"></div>
+      </div>
+
+      <!-- SEGUIMIENTO Y ANÁLISIS DE LA GESTIÓN DE ASESORES -->
+      <div class="header" style="margin-top:26px;margin-bottom:6px">
+        <div class="header-left">
+          <div class="section-title" style="margin-bottom:0">Seguimiento y Análisis de la Gestión de Asesores</div>
+        </div>
+        <div class="header-right">
+          <select id="gestion-mes-filtro" class="gestion-select" onchange="renderGestionAsesores()"></select>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Gestiones diarias por asesor</div>
+          <div class="chart-sub" id="gestion-diaria-sub">Cargando…</div>
+        </div>
+        <div style="overflow-x:auto" id="gestion-diaria-table"></div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Matriz Hora × Canal de origen</div>
+          <div class="chart-sub" id="gestion-matriz-sub">Volumen de gestiones por franja horaria (bloques de 2h) y canal utilizado.</div>
+        </div>
+        <div id="gestion-matriz-table"></div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Efectividad Global del Mes</div>
+          <div class="chart-sub" id="gestion-global-sub">Cargando…</div>
+        </div>
+        <div class="gestion-gauge-global-wrap">
+          <div class="chart-wrap" style="height:110px;max-width:220px">
+            <canvas id="gauge-global"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <div class="chart-title">Efectividad por Canal y Horario Pico</div>
+          <div class="chart-sub">Medidor de contactos efectivos por canal (según columna Estado) — verde ≥70%, amarillo 40–69%, rojo &lt;40%. El bloque horario mostrado es donde ese canal concentra más contactos efectivos.</div>
+        </div>
+        <div class="gestion-gauge-grid" id="gestion-gauge-grid"></div>
       </div>
     </div>
 
@@ -289,6 +354,7 @@ const CONFIG = {
   GID:        '0',
   METAS_GID:  '325243383',
   TRANS_GID:  '1278724273',
+  GESTION_GID: '1882670293',
   META_PROVISIONAL: 320_000_000,
 };
 
@@ -469,6 +535,7 @@ function startAutoRefresh() {
   setTimeout(function tick() {
     loadData();
     loadMetas();
+    loadGestion();
     setTimeout(tick, 24 * 60 * 60 * 1000); // se repite cada 24h a partir de la primera medianoche
   }, msHastaProximaMedianoche());
 }
@@ -1410,14 +1477,19 @@ function renderAsesores() {
   });
   const allAsesores = [...new Set(allRows.map(r=>String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
   const byAsesor    = {};
-  allAsesores.forEach(a => { byAsesor[a] = { valMes:0, valSprint:0 }; });
+  allAsesores.forEach(a => { byAsesor[a] = { valMes:0, valSprint:0, acumSprint1:0, acumSprint2:0 }; });
   currMonthRows.forEach(r => {
     const a = String(r[COL_ASESOR]||'').trim();
     if (!a||a==='#N/D') return;
     const d   = parseDate(r['Fecha de ingreso']);
     const val = parseNum(r['VALOR']);
     byAsesor[a].valMes += val;
-    if (d && sprintOfMonth(d.getDate()) === currSN) byAsesor[a].valSprint += val;
+    if (!d) return;
+    const sn = sprintOfMonth(d.getDate());
+    if (sn === currSN) byAsesor[a].valSprint += val;
+    // Acumulado hasta el cierre de cada sprint (para las líneas de corte en la gráfica)
+    if (sn <= 1) byAsesor[a].acumSprint1 += val;
+    if (sn <= 2) byAsesor[a].acumSprint2 += val;
   });
   const asesores = Object.entries(byAsesor).map(([name,d])=>({name,...d})).sort((a,b)=>b.valMes-a.valMes);
 
@@ -1438,23 +1510,23 @@ function renderAsesores() {
 
   if (!asesores.length) return;
 
-  // Eje y barras referenciados contra la Meta Asesor Semanal (no el monto plano)
-  const metaSemVal = metaAsesorSemanal ? +(metaAsesorSemanal / 1_000_000).toFixed(3) : null;
-  const maxV = Math.max(...asesores.map(a=>a.valSprint/1_000_000), metaSemVal || 0) * 1.25 || 1;
+  // Eje y barras referenciados contra la Meta Asesor Mensual (acumulado del mes, no el sprint aislado)
+  const metaMensVal = metaAsesorMensual ? +(metaAsesorMensual / 1_000_000).toFixed(3) : null;
+  const maxV = Math.max(...asesores.map(a=>a.valMes/1_000_000), metaMensVal || 0) * 1.25 || 1;
 
   const barColor = a => {
-    if (!metaAsesorSemanal) return '#9FE1CB';
-    const pct = a.valSprint / metaAsesorSemanal * 100;
+    if (!metaAsesorMensual) return '#9FE1CB';
+    const pct = a.valMes / metaAsesorMensual * 100;
     return pct >= 100 ? '#1D9E75' : pct >= 60 ? '#EF9F27' : '#D85A30';
   };
 
-  // Línea punteada vertical marcando la Meta Asesor Semanal sobre las barras
-  const metaSemanalLinePlugin = {
-    id: 'metaSemanalLine',
+  // Línea punteada vertical marcando la Meta Asesor Mensual (cruza todas las barras)
+  const metaMensualLinePlugin = {
+    id: 'metaMensualLine',
     afterDraw(chart) {
-      if (!metaSemVal) return;
+      if (!metaMensVal) return;
       const { ctx, chartArea, scales } = chart;
-      const x = scales.x.getPixelForValue(metaSemVal);
+      const x = scales.x.getPixelForValue(metaMensVal);
       if (x < chartArea.left || x > chartArea.right) return;
       ctx.save();
       ctx.strokeStyle = '#b86e00';
@@ -1468,17 +1540,51 @@ function renderAsesores() {
       ctx.fillStyle = '#b86e00';
       ctx.font = '700 10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`Meta semanal: ${fmtChart(metaSemVal)}`, x, chartArea.top - 6);
+      ctx.fillText(`Meta mensual: ${fmtChart(metaMensVal)}`, x, chartArea.top - 6);
       ctx.restore();
     }
   };
+
+  // Marcas verticales, DENTRO de cada barra, con el acumulado propio de ese asesor
+  // al cierre del Sprint 1 y del Sprint 2 (pacing real vs. la meta mensual final)
+  const sprintCutoffPlugin = {
+    id: 'sprintCutoffs',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales, chartArea } = chart;
+      const meta = chart.getDatasetMeta(0);
+      const drawTick = (bar, val, color) => {
+        if (!bar || !val) return;
+        const x = scales.x.getPixelForValue(+(val / 1_000_000).toFixed(3));
+        if (x < chartArea.left || x > chartArea.right) return;
+        const yTop = bar.y - bar.height / 2 + 2;
+        const yBot = bar.y + bar.height / 2 - 2;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x, yTop);
+        ctx.lineTo(x, yBot);
+        ctx.stroke();
+        ctx.restore();
+      };
+      asesores.forEach((a, i) => {
+        drawTick(meta.data[i], a.acumSprint1, '#0d6b47');
+        drawTick(meta.data[i], a.acumSprint2, '#b86e00');
+      });
+    }
+  };
+
+  document.getElementById('asesores-legend').innerHTML = `
+    <span class="li"><span class="lsq" style="background:#0d6b47"></span>Cierre Sprint 1</span>
+    <span class="li"><span class="lsq" style="background:#b86e00"></span>Cierre Sprint 2</span>
+    <span class="li"><span class="lsq" style="background:#EF9F27"></span>Meta mensual (línea punteada)</span>`;
 
   charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
     type: 'bar',
     data: {
       labels: asesores.map(a=>a.name),
       datasets: [{
-        data: asesores.map(a=>+(a.valSprint/1_000_000).toFixed(3)),
+        data: asesores.map(a=>+(a.valMes/1_000_000).toFixed(3)),
         backgroundColor: asesores.map(barColor),
         borderRadius: 5,
         datalabels: {
@@ -1488,23 +1594,300 @@ function renderAsesores() {
         }
       }]
     },
-    plugins: [metaSemanalLinePlugin],
+    plugins: [metaMensualLinePlugin, sprintCutoffPlugin],
     options: {
       responsive:true, maintainAspectRatio:false, indexAxis:'y',
       layout:{ padding:{ top:24, right:60 } },
       plugins: {
         legend:{display:false}, datalabels:{},
-        tooltip:{ callbacks:{ label:c=>{
-          const val = c.parsed.x * 1_000_000;
-          const pct = metaAsesorSemanal ? ` · ${(val/metaAsesorSemanal*100).toFixed(0)}% de la meta semanal` : '';
-          return ` ${fmtM(val)}${pct}`;
-        } } }
+        tooltip:{ callbacks:{
+          label:c=>{
+            const val = c.parsed.x * 1_000_000;
+            const pct = metaAsesorMensual ? ` · ${(val/metaAsesorMensual*100).toFixed(0)}% de la meta mensual` : '';
+            return ` Acumulado: ${fmtM(val)}${pct}`;
+          },
+          afterLabel:c=>{
+            const a = asesores[c.dataIndex];
+            const lineas = [];
+            if (a.acumSprint1) lineas.push(` Cierre Sprint 1: ${fmtM(a.acumSprint1)}`);
+            if (a.acumSprint2) lineas.push(` Cierre Sprint 2: ${fmtM(a.acumSprint2)}`);
+            return lineas;
+          }
+        } }
       },
       scales: {
         x:{ ticks:{color:'#bbb',font:{size:11},callback:v=>fmtAxis(v)}, grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxV },
         y:{ ticks:{color:'#444',font:{size:11}}, grid:{display:false} }
       }
     }
+  });
+}
+
+/* ─── GESTIÓN DE ASESORES: carga desde la pestaña "Gestión Asesores" ─── */
+let gestionRows = []; // { fecha, horaNum, usuario, canal, efectiva } — usuario viene EXCLUSIVAMENTE de la columna V
+
+// El texto de "Hora" viene como "15:58 PM": el número ya está en formato 24h
+// (verificado contra los datos reales), así que se ignora el sufijo AM/PM.
+function parseHoraHour(horaStr) {
+  const m = String(horaStr || '').trim().match(/^(\d{1,2}):/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  return (h >= 0 && h <= 23) ? h : null;
+}
+
+// Clasifica la efectividad del contacto usando la columna "Estado" (formato
+// "Saliente/Entrante - Contactado/No contactado - <resultado>"), verificado contra
+// los datos reales. La columna "Notas" es texto libre sin palabras clave estandarizadas,
+// así que NO se usa para este cálculo.
+function esGestionEfectiva(estado) {
+  const e = String(estado || '').toLowerCase();
+  if (!e) return null;
+  if (e.includes('no contactado')) return false;
+  if (e.includes('contactado')) return true;
+  return null; // estado no reconocido (ej. "Entregado") — se excluye del cálculo
+}
+
+function loadGestion() {
+  if (!CONFIG.GESTION_GID) return;
+  const old = document.getElementById('script-gestion');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-gestion';
+  // SELECT A,B,M,V,AI = Fecha, Hora, Estado, Usuario gestión, Canal origen
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onGestionData&gid=${CONFIG.GESTION_GID}&tq=${encodeURIComponent('SELECT A,B,M,V,AI')}&_=${Date.now()}`;
+  s.onerror = () => { gestionRows = []; renderGestionAsesores(); };
+  document.head.appendChild(s);
+}
+
+function onGestionData(resp) {
+  if (resp.status !== 'ok') { gestionRows = []; renderGestionAsesores(); return; }
+  gestionRows = (resp.table.rows || []).map(row => {
+    const c = row.c || [];
+    const fecha   = parseDate(c[0]?.v);
+    const usuario = String(c[3]?.v || '').trim(); // Columna V — Usuario gestión (regla mandatoria)
+    if (!fecha || !usuario) return null;
+    return {
+      fecha,
+      horaNum: parseHoraHour(c[1]?.v),
+      efectiva: esGestionEfectiva(c[2]?.v),
+      usuario,
+      canal: String(c[4]?.v || '').trim() || 'Sin canal',
+    };
+  }).filter(Boolean);
+  renderGestionAsesores();
+}
+
+// Llena el selector con "Mes actual" + un histórico por cada mes distinto presente en los datos
+function populateGestionMesFiltro() {
+  const sel = document.getElementById('gestion-mes-filtro');
+  if (!sel) return;
+  const today = new Date();
+  const mesesSet = new Set();
+  gestionRows.forEach(r => mesesSet.add(`${r.fecha.getFullYear()}-${r.fecha.getMonth()}`));
+  const historicos = [...mesesSet]
+    .map(k => { const [y, m] = k.split('-').map(Number); return { y, m }; })
+    .filter(({ y, m }) => !(y === today.getFullYear() && m === today.getMonth()))
+    .sort((a, b) => b.y !== a.y ? b.y - a.y : b.m - a.m);
+
+  const valorPrevio = sel.value;
+  sel.innerHTML = `<option value="actual">Mes actual (${MESES[today.getMonth()]})</option>` +
+    historicos.map(({ y, m }) => `<option value="${y}-${m}">${MESES[m].charAt(0).toUpperCase() + MESES[m].slice(1)} ${y} (Histórico)</option>`).join('');
+  if (valorPrevio && [...sel.options].some(o => o.value === valorPrevio)) sel.value = valorPrevio;
+}
+
+// Gauge/tacómetro semicircular reutilizable (doughnut de 180° con texto centrado)
+function drawGauge(canvasId, pct, chartKey) {
+  destroyChart(chartKey);
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  const color = pct >= 70 ? '#1D9E75' : pct >= 40 ? '#e5a020' : '#d85a30';
+  charts[chartKey] = new Chart(el, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct, 100 - pct],
+        backgroundColor: [color, '#f0eeea'],
+        borderWidth: 0,
+        datalabels: { display: false },
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      circumference: 180, rotation: 270, cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: false } },
+    },
+    plugins: [{
+      id: 'gaugeText',
+      afterDraw(chart) {
+        const { ctx, chartArea } = chart;
+        // El centro vertical del chartArea coincide con el borde plano del semicírculo
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        const fontSize = Math.max(11, Math.round((chartArea.right - chartArea.left) / 11));
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = color;
+        ctx.font = `700 ${fontSize}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+        ctx.fillText(pct.toFixed(0) + '%', cx, cy + 2);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function renderGestionAsesores() {
+  const diariaWrap = document.getElementById('gestion-diaria-table');
+  const diariaSub  = document.getElementById('gestion-diaria-sub');
+  const matrizWrap = document.getElementById('gestion-matriz-table');
+  const matrizSub  = document.getElementById('gestion-matriz-sub');
+  const gaugeGlobalSub = document.getElementById('gestion-global-sub');
+  const gaugeGrid  = document.getElementById('gestion-gauge-grid');
+  const filtroSel  = document.getElementById('gestion-mes-filtro');
+  if (!diariaWrap) return; // la vista aún no está montada en el DOM
+
+  populateGestionMesFiltro();
+
+  if (!gestionRows.length) {
+    diariaWrap.innerHTML = '<p style="color:#999;font-size:12px">Sin datos de gestión disponibles todavía.</p>';
+    if (diariaSub) diariaSub.textContent = 'Sin datos disponibles.';
+    matrizWrap.innerHTML = ''; gaugeGrid.innerHTML = '';
+    if (gaugeGlobalSub) gaugeGlobalSub.textContent = 'Sin datos disponibles.';
+    return;
+  }
+
+  // Mes elegido en el selector (por defecto: mes actual real)
+  const today = new Date();
+  const filtroVal = filtroSel ? filtroSel.value : 'actual';
+  let filtroY, filtroM;
+  if (!filtroVal || filtroVal === 'actual') {
+    filtroY = today.getFullYear(); filtroM = today.getMonth();
+  } else {
+    [filtroY, filtroM] = filtroVal.split('-').map(Number);
+  }
+  const nombreMesFiltro = `${MESES[filtroM]} ${filtroY}`;
+
+  // Todo lo de abajo se calcula EXCLUSIVAMENTE sobre las gestiones del mes seleccionado
+  const filas = gestionRows.filter(r => r.fecha.getFullYear() === filtroY && r.fecha.getMonth() === filtroM);
+
+  if (!filas.length) {
+    diariaWrap.innerHTML = `<p style="color:#999;font-size:12px">Sin gestiones registradas en ${nombreMesFiltro}.</p>`;
+    if (diariaSub) diariaSub.textContent = `Sin datos para ${nombreMesFiltro}.`;
+    matrizWrap.innerHTML = ''; gaugeGrid.innerHTML = '';
+    if (gaugeGlobalSub) gaugeGlobalSub.textContent = `Sin datos para ${nombreMesFiltro}.`;
+    return;
+  }
+
+  // Día de corte dentro del mes filtrado (última fecha con gestiones en ese mes)
+  const corteD = new Date(Math.max(...filas.map(r => r.fecha.getTime()))).getDate();
+  const usuarios = [...new Set(filas.map(r => r.usuario))].sort();
+
+  /* 1. Seguimiento cuantitativo diario */
+  const porUsuarioDia = {}, porUsuarioMes = {}, diasActivosPorUsuario = {};
+  usuarios.forEach(u => { porUsuarioDia[u] = 0; porUsuarioMes[u] = 0; diasActivosPorUsuario[u] = new Set(); });
+  filas.forEach(r => {
+    porUsuarioMes[r.usuario]++;
+    diasActivosPorUsuario[r.usuario].add(r.fecha.getDate());
+    if (r.fecha.getDate() === corteD) porUsuarioDia[r.usuario]++;
+  });
+
+  let totalDia = 0, totalMes = 0;
+  const maxMes = Math.max(...usuarios.map(u => porUsuarioMes[u]), 1);
+  let filasDiaria = usuarios.map(u => {
+    const dia = porUsuarioDia[u], mes = porUsuarioMes[u];
+    const diasAct = diasActivosPorUsuario[u].size || 1;
+    totalDia += dia; totalMes += mes;
+    const heat = `background:rgba(29,158,117,${(mes / maxMes * 0.5).toFixed(2)})`;
+    return `<tr><td>${u}</td><td class="num">${fmtNum(dia)}</td><td class="num" style="${heat}">${fmtNum(mes)}</td><td class="num">${fmtNum(mes / diasAct)}</td></tr>`;
+  }).join('');
+  filasDiaria += `<tr class="total-row"><td>Total equipo</td><td class="num">${fmtNum(totalDia)}</td><td class="num">${fmtNum(totalMes)}</td><td class="num">${fmtNum(totalMes / usuarios.length)}</td></tr>`;
+
+  diariaWrap.innerHTML = `
+    <table class="gestion-table">
+      <thead><tr><th>Asesor</th><th class="num">Día de corte (${corteD}/${filtroM + 1})</th><th class="num">Total ${MESES[filtroM]}</th><th class="num">Promedio diario</th></tr></thead>
+      <tbody>${filasDiaria}</tbody>
+    </table>`;
+  if (diariaSub) diariaSub.textContent = `${filtroVal === 'actual' ? 'Mes actual' : 'Histórico'} · corte al ${corteD} de ${nombreMesFiltro} · ${fmtNum(filas.length)} gestiones registradas en ${nombreMesFiltro}`;
+
+  /* 2. Matriz Hora × Canal de origen (bloques de 2h, dentro del mes filtrado) */
+  const canalTotales = {};
+  filas.forEach(r => { canalTotales[r.canal] = (canalTotales[r.canal] || 0) + 1; });
+  const canales = Object.keys(canalTotales).sort((a, b) => canalTotales[b] - canalTotales[a]);
+
+  const bucketOf = h => h == null ? null : Math.floor(h / 2) * 2;
+  const bucketsSet = new Set();
+  filas.forEach(r => { const b = bucketOf(r.horaNum); if (b != null) bucketsSet.add(b); });
+  const buckets = [...bucketsSet].sort((a, b) => a - b);
+  const franja = b => `${String(b).padStart(2, '0')}:00–${String(b + 2).padStart(2, '0')}:00`;
+
+  const matriz = {};
+  buckets.forEach(b => { matriz[b] = {}; canales.forEach(c => { matriz[b][c] = 0; }); });
+  filas.forEach(r => {
+    const b = bucketOf(r.horaNum);
+    if (b == null) return;
+    matriz[b][r.canal] = (matriz[b][r.canal] || 0) + 1;
+  });
+
+  let maxCell = 1;
+  buckets.forEach(b => canales.forEach(c => { maxCell = Math.max(maxCell, matriz[b][c]); }));
+  const heatStyle = v => v > 0 ? `background:rgba(29,158,117,${(v / maxCell * 0.65).toFixed(2)})` : '';
+
+  const headCanales = canales.map(c => `<th class="num">${c}</th>`).join('');
+  const filasMatriz = buckets.map(b => {
+    const celdas = canales.map(c => `<td class="num" style="${heatStyle(matriz[b][c])}">${matriz[b][c] > 0 ? fmtNum(matriz[b][c]) : '—'}</td>`).join('');
+    const totalFila = canales.reduce((s, c) => s + matriz[b][c], 0);
+    return `<tr><td>${franja(b)}</td>${celdas}<td class="num" style="font-weight:700">${fmtNum(totalFila)}</td></tr>`;
+  }).join('');
+  const totalesCanalFila = canales.map(c => `<td class="num" style="font-weight:700">${fmtNum(canalTotales[c])}</td>`).join('');
+  const granTotal = canales.reduce((s, c) => s + canalTotales[c], 0);
+
+  matrizWrap.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="gestion-table">
+      <thead><tr><th>Franja horaria</th>${headCanales}<th class="num">Total</th></tr></thead>
+      <tbody>${filasMatriz}<tr class="total-row"><td>Total</td>${totalesCanalFila}<td class="num">${fmtNum(granTotal)}</td></tr></tbody>
+    </table>
+    </div>`;
+  if (matrizSub) matrizSub.textContent = `Volumen de gestiones por franja horaria y canal — ${nombreMesFiltro}.`;
+
+  /* 3. Efectividad: tacómetro global del mes + medidor por canal (según columna Estado) */
+  const intentadas = filas.filter(r => r.efectiva !== null);
+  const efectivasTotal = intentadas.filter(r => r.efectiva).length;
+  const pctGlobal = intentadas.length ? (efectivasTotal / intentadas.length * 100) : 0;
+  drawGauge('gauge-global', pctGlobal, 'gaugeGlobal');
+  if (gaugeGlobalSub) gaugeGlobalSub.textContent = `${fmtNum(efectivasTotal)} contactos efectivos de ${fmtNum(intentadas.length)} intentados en ${nombreMesFiltro} (según columna Estado).`;
+
+  // Bloque horario donde cada canal concentra más CONTACTOS EFECTIVOS (no volumen bruto)
+  const mejorBloqueEfectivo = canal => {
+    const porBucket = {};
+    filas.forEach(r => {
+      if (r.canal !== canal || r.efectiva !== true) return;
+      const b = bucketOf(r.horaNum);
+      if (b == null) return;
+      porBucket[b] = (porBucket[b] || 0) + 1;
+    });
+    let mejorB = null, mejorVal = -1;
+    Object.entries(porBucket).forEach(([b, v]) => { if (v > mejorVal) { mejorVal = v; mejorB = +b; } });
+    return mejorB != null ? { bucket: mejorB, val: mejorVal } : null;
+  };
+
+  gaugeGrid.innerHTML = canales.map((c, i) => `
+    <div class="gestion-gauge-card">
+      <div class="gestion-gauge-canal">${c}</div>
+      <div class="chart-wrap" style="height:90px">
+        <canvas id="gauge-canal-${i}"></canvas>
+      </div>
+      <div class="gestion-gauge-franja" id="gauge-canal-${i}-lbl"></div>
+    </div>`).join('') || '<p style="color:#999;font-size:12px">Sin datos suficientes para este mes.</p>';
+
+  canales.forEach((c, i) => {
+    const filasCanal   = filas.filter(r => r.canal === c);
+    const intentadasC  = filasCanal.filter(r => r.efectiva !== null);
+    const efectivasC   = intentadasC.filter(r => r.efectiva).length;
+    const pctC = intentadasC.length ? (efectivasC / intentadasC.length * 100) : 0;
+    drawGauge(`gauge-canal-${i}`, pctC, `gaugeCanal${i}`);
+    const mejor = mejorBloqueEfectivo(c);
+    const lbl = document.getElementById(`gauge-canal-${i}-lbl`);
+    if (lbl) lbl.textContent = mejor ? `Pico efectivo: ${franja(mejor.bucket)}` : 'Sin contactos efectivos';
   });
 }
 
@@ -1667,6 +2050,10 @@ function switchView(name, btn) {
     if (el) el.style.display = (isTransicion || isMensual) ? 'none' : '';
   });
 
+  // Los charts creados mientras su pestaña estaba oculta (display:none) quedan en 0x0px;
+  // forzamos un resize ahora que el contenedor ya es visible.
+  requestAnimationFrame(() => Object.values(charts).forEach(c => c && c.resize()));
+
   if (isTransicion) { loadTransicion(); return; } // loadTransicion llama renderTransicion al terminar
   if (lastRendered) { renderKPIs(); renderBuckets(); }
 }
@@ -1732,6 +2119,7 @@ loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js')
     loadData();
     loadMetas();
     loadTransicion();
+    loadGestion();
     startAutoRefresh();
   })
   .catch(err => showError('No se pudieron cargar las librerías de gráficos (' + err.message + ').'));
