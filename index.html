@@ -3,51 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard de Recaudo</title>
+<title>Dashboard de Recaudo · Platam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
+/* ── PLATAM BRAND TOKENS ───────────────────────────── */
+:root {
+  --p-navy:      #0A0E28;   /* Primary dark — dominant */
+  --p-mint:      #29DBA4;   /* Signature accent */
+  --p-mint-dark: #2DA888;   /* Secondary mint */
+  --p-mint-pale: #C7FEED;   /* Subtle tint */
+  --p-bg:        #f5f7fa;   /* Page background */
+  --p-card:      #ffffff;   /* Card background */
+  --p-border:    #e8edf2;   /* Card borders */
+  --p-text:      #0A0E28;   /* Body text */
+  --p-muted:     #8492a6;   /* Labels, subtitles */
+  --p-shadow:    0 1px 4px rgba(10,14,40,.07);
+  --p-radius:    12px;
+  --p-radius-sm: 8px;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f3f0; color: #1a1a1a; font-size: 14px; }
+body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--p-bg); color: var(--p-text); font-size: 14px; }
 .page { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
 
 /* KPI meta progress */
 .kpi-meta { margin-top: 8px; }
-.kpi-meta-bar { height: 3px; background: #f0eeea; border-radius: 2px; overflow: hidden; margin-bottom: 3px; }
+.kpi-meta-bar { height: 3px; background: #eef1f6; border-radius: 2px; overflow: hidden; margin-bottom: 3px; }
 .kpi-meta-fill { height: 100%; border-radius: 2px; transition: width .5s; }
-.kpi-meta-pct { font-size: 10px; color: #aaa; }
-.kpi-meta-pct.over { color: #0d8a55; font-weight: 600; }
-.kpi-extra { font-size: 10px; color: #999; margin-top: 5px; }
+.kpi-meta-pct { font-size: 10px; color: var(--p-muted); }
+.kpi-meta-pct.over { color: var(--p-mint-dark); font-weight: 600; }
+.kpi-extra { font-size: 10px; color: var(--p-muted); margin-top: 5px; }
 
 /* Header */
 .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
-.header-left h1 { font-size: 18px; font-weight: 600; color: #111; }
-.header-left p  { font-size: 12px; color: #999; margin-top: 3px; }
+.header-left h1 { font-size: 18px; font-weight: 700; color: var(--p-navy); letter-spacing: -.01em; }
+.header-left p  { font-size: 12px; color: var(--p-muted); margin-top: 3px; }
 .header-right   { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* Tabs */
-.tabs { display: flex; background: #e8e7e3; border-radius: 8px; padding: 3px; gap: 2px; }
-.tab  { padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; background: transparent; color: #666; font-family: inherit; transition: all .15s; }
-.tab.active { background: #fff; color: #111; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+/* Tabs — Platam: fondo neutro claro, activa = navy con texto blanco */
+.tabs { display: flex; background: #dde2eb; border-radius: var(--p-radius-sm); padding: 3px; gap: 2px; flex-wrap: wrap; }
+.tab  { padding: 6px 15px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 400; background: transparent; color: #5a6474; font-family: 'Roboto', inherit; transition: all .15s; }
+.tab:hover { background: rgba(255,255,255,.6); color: var(--p-navy); }
+.tab.active { background: var(--p-navy); color: #ffffff; font-weight: 500; box-shadow: 0 2px 6px rgba(10,14,40,.18); }
 
 /* KPI grid */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-.kpi { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #e8e8e8; }
-.kpi-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-.kpi-value { font-size: 26px; font-weight: 600; line-height: 1; color: #111; }
-.kpi-sub   { font-size: 11px; color: #bbb; margin-top: 5px; }
+.kpi { background: var(--p-card); border-radius: var(--p-radius); padding: 16px; border: 1px solid var(--p-border); box-shadow: var(--p-shadow); }
+.kpi-label { font-size: 10px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-weight: 500; }
+.kpi-value { font-size: 26px; font-weight: 700; line-height: 1; color: var(--p-navy); }
+.kpi-sub   { font-size: 11px; color: #b0bac8; margin-top: 5px; }
 
-/* Metas banner */
-.metas-ph { background: #fffcf5; border: 1px dashed #e5c96a; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #7a6200; }
+/* Metas banner — borde mint, fondo mint tenue */
+.metas-ph { background: #f0fdfb; border: 1px dashed var(--p-mint); border-radius: var(--p-radius); padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--p-navy); }
 
 /* Section label */
-.section-title { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; font-weight: 600; }
+.section-title { font-size: 10px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; font-weight: 600; }
 
 /* Bucket grid */
 .bucket-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
-.bucket { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 16px; border-left: 3px solid; }
+.bucket { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 16px; border-left: 3px solid; box-shadow: var(--p-shadow); }
 .bucket-name { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
-.bucket-val  { font-size: 22px; font-weight: 700; margin-bottom: 2px; color: #111; }
+.bucket-val  { font-size: 22px; font-weight: 700; margin-bottom: 2px; color: var(--p-navy); }
 .bucket-pct  { font-size: 12px; }
-.pbar  { height: 5px; border-radius: 3px; background: #f0eeea; overflow: hidden; }
+.pbar  { height: 5px; border-radius: 3px; background: #eef1f6; overflow: hidden; }
 .pfill { height: 100%; border-radius: 3px; transition: width .4s; }
 
 /* Views */
@@ -55,100 +75,139 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .view.active { display: block; }
 
 /* Chart box */
-.chart-box    { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.chart-box    { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--p-shadow); }
 .chart-header { margin-bottom: 4px; }
-.chart-title  { font-size: 13px; font-weight: 600; color: #333; }
-.chart-sub    { font-size: 11px; color: #aaa; margin-top: 2px; margin-bottom: 16px; }
+.chart-title  { font-size: 13px; font-weight: 600; color: var(--p-navy); }
+.chart-sub    { font-size: 11px; color: #b0bac8; margin-top: 2px; margin-bottom: 16px; }
 .chart-wrap   { position: relative; width: 100%; }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
-.li  { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
+.li  { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--p-muted); }
 .lsq { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 
 /* Mensual cards */
 .mes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 16px; }
-.mes-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; }
-.mes-card.active-mes { border: 1.5px solid #1D9E75; }
-.mes-label  { font-size: 10px; color: #999; text-transform: uppercase; margin-bottom: 4px; }
-.mes-val    { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 2px; }
-.mes-txn    { font-size: 10px; color: #bbb; margin-bottom: 6px; }
+.mes-card { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 14px; box-shadow: var(--p-shadow); }
+.mes-card.active-mes { border: 1.5px solid var(--p-mint); }
+.mes-label  { font-size: 10px; color: var(--p-muted); text-transform: uppercase; margin-bottom: 4px; letter-spacing: .04em; }
+.mes-val    { font-size: 20px; font-weight: 700; color: var(--p-navy); margin-bottom: 2px; }
+.mes-txn    { font-size: 10px; color: #b0bac8; margin-bottom: 6px; }
 .mes-delta  { font-size: 11px; font-weight: 500; }
 
 /* Asesor cards */
 .asesor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.asesor-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; }
-.asesor-card.leader { border-color: #1D9E75; box-shadow: 0 0 0 1px #1D9E7530; }
-.asesor-name { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: .4px; }
-.asesor-val  { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 10px; line-height: 1.1; }
+.asesor-card { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 14px 16px; box-shadow: var(--p-shadow); }
+.asesor-card.leader { border-color: var(--p-mint); box-shadow: 0 0 0 1px rgba(41,219,164,.2); }
+.asesor-name { font-size: 11px; font-weight: 700; color: var(--p-muted); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; letter-spacing: .4px; }
+.asesor-val  { font-size: 22px; font-weight: 700; color: var(--p-navy); margin-bottom: 10px; line-height: 1.1; }
 .asesor-metarow { margin-top: 10px; }
 .asesor-metarow-txt { font-size: 10px; font-weight: 600; margin-top: 4px; }
-.asesor-pbar { height: 5px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+.asesor-pbar { height: 5px; background: #eef1f6; border-radius: 3px; overflow: hidden; }
 .asesor-pfill { height: 100%; border-radius: 3px; transition: width .4s; }
 
 /* Gestión de asesores */
 .gestion-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.gestion-table th { text-align: left; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .04em; padding: 8px 10px; border-bottom: 2px solid #eee; white-space: nowrap; }
-.gestion-table td { padding: 8px 10px; border-bottom: 1px solid #f2f2f2; color: #333; white-space: nowrap; }
+.gestion-table th { text-align: left; font-size: 10px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 2px solid var(--p-border); white-space: nowrap; font-weight: 600; }
+.gestion-table td { padding: 8px 10px; border-bottom: 1px solid #f2f4f7; color: var(--p-text); white-space: nowrap; }
 .gestion-table tr:last-child td { border-bottom: none; }
 .gestion-table td.num, .gestion-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.gestion-table tr.total-row td { font-weight: 700; background: #f9f9f7; border-top: 2px solid #eee; }
-.gestion-select { font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; }
+.gestion-table tr.total-row td { font-weight: 700; background: #f8fafb; border-top: 2px solid var(--p-border); }
+.gestion-select { font-family: 'Roboto', inherit; font-size: 12px; padding: 6px 12px; border-radius: var(--p-radius-sm); border: 1px solid var(--p-border); background: var(--p-card); color: var(--p-text); cursor: pointer; }
 .gestion-gauge-global-wrap { display: flex; flex-direction: column; align-items: center; }
 .gestion-gauge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px 10px; }
 .gestion-gauge-card { text-align: center; }
-.gestion-gauge-canal { font-size: 11px; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: .03em; }
-.gestion-gauge-franja { font-size: 11px; color: #999; margin-top: 2px; }
-.gestion-gauge-count { font-size: 10px; color: #bbb; }
-@media (max-width: 700px) {
-  .gestion-gauge-grid { grid-template-columns: repeat(2, 1fr); }
-}
+.gestion-gauge-canal { font-size: 11px; font-weight: 700; color: var(--p-navy); text-transform: uppercase; letter-spacing: .03em; }
+.gestion-gauge-franja { font-size: 11px; color: var(--p-muted); margin-top: 2px; }
+.gestion-gauge-count { font-size: 10px; color: #b0bac8; }
+@media (max-width: 700px) { .gestion-gauge-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Metas V2 */
+.prodcard-box { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--p-shadow); }
+.prodcard-title { font-size: 15px; font-weight: 700; color: var(--p-navy); letter-spacing: -.01em; margin-bottom: 16px; }
+.prodcard-buckets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.bucket-mini { border: 1px solid var(--p-border); border-radius: var(--p-radius-sm); padding: 12px; border-left: 3px solid; }
+.bucket-mini-name { font-size: 10px; font-weight: 700; color: var(--p-muted); text-transform: uppercase; margin-bottom: 6px; }
+.bucket-mini-val { font-size: 18px; font-weight: 700; color: var(--p-navy); margin-bottom: 8px; }
+.bucket-mini-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bucket-mini-progress .pbar { flex: 1; }
+.bucket-mini-pct-label { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.bucket-mini-meta { font-size: 11px; color: var(--p-muted); margin-bottom: 5px; }
+.bucket-mini-hist { font-size: 11px; font-weight: 600; padding-top: 6px; border-top: 1px dashed var(--p-border); }
 
 /* ── Transición ── */
-.tab-transicion { border-left: 2px solid #e0e0e0; margin-left: 4px; padding-left: 12px; }
+.tab-transicion { border-left: 2px solid var(--p-border); margin-left: 4px; padding-left: 12px; }
 .trans-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.trans-title  { font-size: 16px; font-weight: 700; color: #111; }
-.trans-sub    { font-size: 12px; color: #999; margin-top: 2px; }
+.trans-title  { font-size: 16px; font-weight: 700; color: var(--p-navy); }
+.trans-sub    { font-size: 12px; color: var(--p-muted); margin-top: 2px; }
 .trans-overall{ text-align: right; }
-.trans-overall-pct { font-size: 28px; font-weight: 700; color: #1D9E75; line-height: 1; }
-.trans-overall-lbl { font-size: 11px; color: #999; margin-top: 2px; }
-.trans-table  { background: #fff; border: 1px solid #ececec; border-radius: 12px; overflow: hidden; }
-.trans-col-head { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 10px 20px; background: #f8f8f8; border-bottom: 1px solid #ececec; font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .5px; }
-.trans-row    { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 14px 20px; border-bottom: 1px solid #f2f2f2; align-items: center; cursor: pointer; transition: background .15s; }
+.trans-overall-pct { font-size: 28px; font-weight: 700; color: var(--p-mint); line-height: 1; }
+.trans-overall-lbl { font-size: 11px; color: var(--p-muted); margin-top: 2px; }
+.trans-table  { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); overflow: hidden; }
+.trans-col-head { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 10px 20px; background: #f8fafb; border-bottom: 1px solid var(--p-border); font-size: 11px; font-weight: 700; color: var(--p-muted); text-transform: uppercase; letter-spacing: .5px; }
+.trans-row    { display: grid; grid-template-columns: 1fr 160px 180px 110px; gap: 0; padding: 14px 20px; border-bottom: 1px solid #f2f4f7; align-items: center; cursor: pointer; transition: background .15s; }
 .trans-row:last-child { border-bottom: none; }
-.trans-row:hover { background: #fafafa; }
-.trans-row.editing { background: #f5fdf9; }
-.trans-name   { font-size: 13px; font-weight: 600; color: #222; }
+.trans-row:hover { background: #f8fafb; }
+.trans-row.editing { background: #f0fdfb; }
+.trans-name   { font-size: 13px; font-weight: 600; color: var(--p-navy); }
 .trans-note   { font-size: 10px; color: #f5a623; font-weight: 500; margin-top: 2px; }
-.trans-resp   { font-size: 12px; color: #666; }
+.trans-resp   { font-size: 12px; color: var(--p-muted); }
 .trans-pbar-wrap { display: flex; align-items: center; gap: 8px; }
-.trans-pbar   { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.trans-pbar   { flex: 1; height: 8px; background: #eef1f6; border-radius: 4px; overflow: hidden; }
 .trans-pfill  { height: 100%; border-radius: 4px; transition: width .4s, background .3s; }
 .trans-pct-lbl{ font-size: 12px; font-weight: 700; width: 36px; text-align: right; flex-shrink: 0; }
 .trans-badge  { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-.trans-badge.gray   { background: #f0f0f0; color: #888; }
+.trans-badge.gray   { background: #eef1f6; color: #8492a6; }
 .trans-badge.red    { background: #fdecea; color: #c0391b; }
 .trans-badge.yellow { background: #fff8e1; color: #b86e00; }
-.trans-badge.teal   { background: #d4f0e8; color: #1D9E75; }
-.trans-badge.green  { background: #e6f7f1; color: #0d8a55; }
+.trans-badge.teal   { background: #e0faf3; color: var(--p-mint-dark); }
+.trans-badge.green  { background: #d6f5eb; color: #1a7a5e; }
 .trans-dot    { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.trans-dot.gray   { background: #bbb; }
+.trans-dot.gray   { background: #b0bac8; }
 .trans-dot.red    { background: #c0391b; }
 .trans-dot.yellow { background: #e5a020; }
-.trans-dot.teal   { background: #5DCAA5; }
-.trans-dot.green  { background: #1D9E75; }
+.trans-dot.teal   { background: var(--p-mint); }
+.trans-dot.green  { background: var(--p-mint-dark); }
 .trans-editor { display: none; grid-column: 1/-1; padding: 10px 0 4px; }
 .trans-editor.open { display: block; }
-.trans-slider { width: 100%; accent-color: #1D9E75; }
-.trans-obs    { font-size: 12px; color: #555; line-height: 1.5; padding-right: 8px; }
+.trans-slider { width: 100%; accent-color: var(--p-mint); }
+.trans-obs    { font-size: 12px; color: #5a6474; line-height: 1.5; padding-right: 8px; }
 
 /* Loading / Error */
-#loading, #error-msg { text-align: center; padding: 60px 20px; color: #888; }
+#loading, #error-msg { text-align: center; padding: 60px 20px; color: var(--p-muted); }
 #error-msg { color: #c0391b; }
-.spinner { width: 32px; height: 32px; border: 3px solid #eee; border-top-color: #1D9E75; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+.spinner { width: 32px; height: 32px; border: 3px solid #eef1f6; border-top-color: var(--p-mint); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Pestañas de Producto ── */
+.tab-producto { border-left: 2px solid #c8d0db; margin-left: 2px; padding-left: 8px; }
+.prod-hero { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 20px; margin-bottom: 14px; box-shadow: var(--p-shadow); }
+.prod-hero-label { font-size: 10px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-weight: 500; }
+.prod-hero-val   { font-size: 32px; font-weight: 700; line-height: 1; color: var(--p-navy); }
+.prod-hero-sub   { font-size: 12px; color: #b0bac8; margin-top: 6px; }
+.prod-franja-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 16px; }
+.prod-franja-card { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 13px; border-left: 3px solid; box-shadow: var(--p-shadow); }
+.prod-franja-label { font-size: 10px; font-weight: 700; margin-bottom: 5px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .04em; }
+.prod-franja-val   { font-size: 18px; font-weight: 700; color: var(--p-navy); margin-bottom: 2px; }
+.prod-franja-sub   { font-size: 10px; color: #b0bac8; margin-bottom: 3px; }
+.prod-franja-meta  { font-size: 10px; color: var(--p-muted); margin-bottom: 3px; }
+.prod-sprints-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.prod-sprint-card  { background: var(--p-card); border: 1px solid var(--p-border); border-radius: var(--p-radius); padding: 16px; box-shadow: var(--p-shadow); }
+.prod-sprint-card.prod-sprint-active { border-color: var(--p-mint); box-shadow: 0 0 0 1px rgba(41,219,164,.15); }
+.prod-sprint-label { font-size: 10px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; font-weight: 500; }
+.prod-sprint-val   { font-size: 24px; font-weight: 700; color: var(--p-navy); margin-bottom: 4px; }
+.prod-sprint-meta  { font-size: 11px; color: #b0bac8; }
+.prod-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
+.prod-table thead tr { background: #f8fafb; border-bottom: 1px solid var(--p-border); }
+.prod-table th { padding: 10px 16px; font-size: 10px; font-weight: 700; color: var(--p-muted); text-transform: uppercase; letter-spacing: .05em; }
+.prod-table th.num, .prod-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.prod-table td { padding: 8px 16px; border-bottom: 1px solid #f2f4f7; color: var(--p-text); }
+.prod-table tr:last-child td { border-bottom: none; }
+.prod-table tr.prod-table-hoy td { background: #f0fdfb; font-weight: 600; }
 
 @media (max-width: 700px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .bucket-grid { grid-template-columns: repeat(2, 1fr); }
+  .prod-franja-grid { grid-template-columns: repeat(2, 1fr); }
+  .prod-sprints-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -164,15 +223,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="header-left">
         <h1>Recaudo de cartera</h1>
         <p id="dash-subtitle">Cargando…</p>
-        <p id="sync-indicator" style="font-size:11px;color:#1D9E75;margin-top:3px;font-weight:600"></p>
+        <p id="sync-indicator" style="font-size:11px;color:#2DA888;margin-top:3px;font-weight:600"></p>
       </div>
       <div class="header-right">
         <div class="tabs">
-          <button class="tab active" onclick="switchView('diario',this)">Diario</button>
-          <button class="tab" onclick="switchView('semanal',this)">Sprints</button>
-          <button class="tab" onclick="switchView('mensual',this)">Mensual</button>
+          <button class="tab active" onclick="switchView('mensual',this)">Recaudo General</button>
+          <button class="tab tab-producto" onclick="switchView('cosecha',this)">Cosecha +</button>
+          <button class="tab tab-producto" onclick="switchView('agrappay',this)">AgrapPay</button>
+          <button class="tab tab-producto" onclick="switchView('establecimiento',this)">Establecimiento</button>
           <button class="tab" onclick="switchView('asesores',this)">Asesores</button>
-          <button class="tab tab-transicion" onclick="switchView('transicion',this)">⚡ Transición</button>
         </div>
       </div>
     </div>
@@ -226,6 +285,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <!-- MENSUAL -->
     <div class="view" id="view-mensual">
 
+      <!-- Banner resumen ejecutivo del mes -->
+      <div id="mensual-summary-banner" style="
+        display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+        background:#f0fdfb;border:1px dashed #29DBA4;border-radius:10px;
+        padding:10px 16px;margin-bottom:18px;font-size:13px;color:#555;line-height:1.4">
+      </div>
+
       <!-- 1. Recaudo histórico por mes -->
       <div class="section-title">Recaudo histórico</div>
       <div class="mes-grid" id="mes-cards"></div>
@@ -233,22 +299,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <!-- 2. KPIs del mes actual (2 tarjetas) -->
       <div class="kpi-grid" id="mes-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px"></div>
 
-      <!-- 3. Distribución por franjas de mora -->
-      <div id="mes-bucket-section">
-        <div class="section-title" id="mes-bucket-title">Variación por rango de mora — vs mes anterior</div>
-        <div class="bucket-grid" id="mes-bucket-grid"></div>
+      <!-- 3. Sprints del mes vigente -->
+      <div id="mes-sprints-section">
+        <div class="section-title">Recaudo General por Sprints — Mes Vigente</div>
+        <div id="mes-sprints-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px"></div>
       </div>
 
-      <!-- 4. Gráfico principal -->
+      <!-- 4. Recaudo diario — últimos 10 días -->
       <div class="chart-box">
         <div class="chart-header">
-          <div class="chart-title">Composición del recaudo por mes</div>
-          <div class="chart-sub">Cada barra muestra el total mensual dividido por estado de cartera.</div>
+          <div class="chart-title">Recaudo General Diario — Últimos 10 Días</div>
+          <div class="chart-sub">Consolidado de todos los productos. Barra resaltada = hoy.</div>
         </div>
         <div class="chart-wrap" style="height:260px">
-          <canvas id="chart-mensual"></canvas>
+          <canvas id="chart-mensual-diario"></canvas>
         </div>
-        <div class="legend" id="mensual-legend"></div>
       </div>
 
     </div>
@@ -270,65 +335,59 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       </div>
     </div>
 
+    <!-- METAS V2: vista ejecutiva "regla de los 20 segundos" por producto -->
+    <div class="view" id="view-metasv2">
+      <div id="metasv2-container"></div>
+    </div>
+
+    <!-- PRODUCTO (compartido: Cosecha+, AgrapPay, Establecimiento) -->
+    <div class="view" id="view-producto">
+      <div id="prod-kpi-top"></div>
+      <div id="prod-sprints"></div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-header">
+          <div class="chart-title" id="prod-chart-title">Recaudo acumulado del mes</div>
+          <div class="chart-sub" id="prod-chart-sub"></div>
+        </div>
+        <div class="chart-wrap" style="height:220px">
+          <canvas id="chart-producto"></canvas>
+        </div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-header">
+          <div class="chart-title">Recaudo diario del mes</div>
+          <div class="chart-sub" id="prod-daily-chart-sub"></div>
+        </div>
+        <div class="chart-wrap" style="height:220px">
+          <canvas id="chart-producto-diario"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- ASESORES -->
     <div class="view" id="view-asesores">
-      <div class="asesor-grid" id="asesor-cards"></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#f0fdfb;border:1px dashed #29DBA4;border-radius:10px;padding:10px 16px;margin-bottom:18px;font-size:13px;color:#555;line-height:1.4">
+        <span style="font-size:16px">🎯</span>
+        Meta Ideal <strong>$80.9M</strong>
+        <span style="color:#29DBA4;margin:0 4px">·</span>
+        Meta Mínima <strong>$70.3M</strong>
+        <span style="color:#29DBA4;margin:0 4px">·</span>
+        Línea de Comisión <strong>$56.6M</strong> <span style="color:#aaa">(70% Meta Ideal)</span>
+      </div>
       <div class="chart-box">
         <div class="chart-header">
-          <div class="chart-title">Ranking de asesores — Acumulado Mensual</div>
-          <div class="chart-sub">Recaudo acumulado del mes a la fecha por asesor, frente a su Meta Asesor Mensual. Las marcas verticales dentro de cada barra muestran el cierre de cada sprint.</div>
+          <div class="chart-title">Recaudo por Asesor — Composición por Producto</div>
+          <div class="chart-sub">Mes vigente · Meta Ideal Equipo: $80.9M · Meta Mínima Equipo: $70.3M · Línea de comisión: 70% Meta Ideal ($56.6M)</div>
         </div>
-        <div class="chart-wrap" style="height:260px">
+        <div class="chart-wrap" style="height:300px">
           <canvas id="chart-asesores"></canvas>
         </div>
         <div class="legend" id="asesores-legend"></div>
       </div>
 
-      <!-- SEGUIMIENTO Y ANÁLISIS DE LA GESTIÓN DE ASESORES -->
-      <div class="header" style="margin-top:26px;margin-bottom:6px">
-        <div class="header-left">
-          <div class="section-title" style="margin-bottom:0">Seguimiento y Análisis de la Gestión de Asesores</div>
-        </div>
-        <div class="header-right">
-          <select id="gestion-mes-filtro" class="gestion-select" onchange="renderGestionAsesores()"></select>
-        </div>
-      </div>
+      <!-- Tabla de detalle por asesor -->
+      <div id="asesor-tabla" style="margin-bottom:24px"></div>
 
-      <div class="chart-box">
-        <div class="chart-header">
-          <div class="chart-title">Gestiones diarias por asesor</div>
-          <div class="chart-sub" id="gestion-diaria-sub">Cargando…</div>
-        </div>
-        <div style="overflow-x:auto" id="gestion-diaria-table"></div>
-      </div>
-
-      <div class="chart-box">
-        <div class="chart-header">
-          <div class="chart-title">Matriz Hora × Canal de origen</div>
-          <div class="chart-sub" id="gestion-matriz-sub">Volumen de gestiones por franja horaria (bloques de 2h) y canal utilizado.</div>
-        </div>
-        <div id="gestion-matriz-table"></div>
-      </div>
-
-      <div class="chart-box">
-        <div class="chart-header">
-          <div class="chart-title">Efectividad Global del Mes</div>
-          <div class="chart-sub" id="gestion-global-sub">Cargando…</div>
-        </div>
-        <div class="gestion-gauge-global-wrap">
-          <div class="chart-wrap" style="height:110px;max-width:220px">
-            <canvas id="gauge-global"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="chart-box">
-        <div class="chart-header">
-          <div class="chart-title">Efectividad por Canal y Horario Pico</div>
-          <div class="chart-sub">Medidor de contactos efectivos por canal (según columna Estado) — verde ≥70%, amarillo 40–69%, rojo &lt;40%. El bloque horario mostrado es donde ese canal concentra más contactos efectivos.</div>
-        </div>
-        <div class="gestion-gauge-grid" id="gestion-gauge-grid"></div>
-      </div>
     </div>
 
   </div>
@@ -355,12 +414,13 @@ const CONFIG = {
   METAS_GID:  '325243383',
   TRANS_GID:  '1278724273',
   GESTION_GID: '1882670293',
-  META_PROVISIONAL: 320_000_000,
+  METASV2_GID: '72714474',
+  META_PROVISIONAL: 242_688_755, // Aspiracional (reemplazado provisional $320M)
 };
 
 const BUCKETS = [
-  { key: 'Al día',    label: 'Al día',     color: '#1D9E75' },
-  { key: 'Mora 1-30', label: '1–30 días',  color: '#5DCAA5' },
+  { key: 'Al día',    label: 'Al día',     color: '#29DBA4' },
+  { key: 'Mora 1-30', label: '1–30 días',  color: '#2DA888' },
   { key: 'Mora > 30', label: '31–60 días', color: '#EF9F27' },
   { key: 'Mora > 60', label: '61–90 días', color: '#BA7517' },
   { key: 'Mora > 90', label: '+90 días',   color: '#D85A30' },
@@ -380,6 +440,20 @@ let metaAsesorMensual = null; // fila "Meta Asesor Mensual" del Sheet "Metas" (v
 let metaAsesorSemanal = null; // fila "Meta Asesor Semanal" del Sheet "Metas" (valor único, sin año/mes)
 let currentView = 'diario';
 let lastRendered = null; // snapshot for switchView re-render
+
+// Columnas de Pagos para filtrado por producto (se detectan en onSheetData)
+let COL_FECHA_PROD = ''; // Columna A  → fecha del pago (filtro de mes)
+let COL_PRODUCTO   = ''; // Columna E  → nombre del producto
+let COL_MORA_PROD  = ''; // Columna AB → franja de mora por producto
+let COL_VALOR_PROD = ''; // Columna C  → monto del pago
+
+// Config de pestañas de producto
+const PRODUCTOS = {
+  cosecha:         { nombre: 'Cosecha +',      dataKey: 'cosecha',         keyword: 'cosecha'   },
+  agrappay:        { nombre: 'AgrapPay',        dataKey: 'agrappay',        keyword: 'agrap'     },
+  establecimiento: { nombre: 'Establecimiento', dataKey: 'establecimiento', keyword: 'establec'  },
+};
+const VIEWS_PRODUCTO = ['cosecha', 'agrappay', 'establecimiento'];
 
 /* ─── HELPERS ────────────────────────────────────── */
 function parseNum(val) {
@@ -477,6 +551,12 @@ function onSheetData(resp) {
   const allCols = Object.keys(allRows[0] || {});
   COL_ESTADO = allCols.find(c => c.trim().toLowerCase().includes('estado')) || 'Estado de cartera';
   COL_ASESOR = allCols.find(c => c.trim() === 'ASESOR QUE REPORTA') || 'ASESOR QUE REPORTA';
+  // Columna E (idx 4) = producto; Columna AB (idx 27) = franja de mora por producto
+  const rawCols = resp.table.cols.map(c => c.label);
+  COL_FECHA_PROD = rawCols[0]  || ''; // Columna A = fecha del pago
+  COL_PRODUCTO   = rawCols[4]  || ''; // Columna E = producto
+  COL_MORA_PROD  = rawCols[27] || ''; // Columna AB = franja de mora
+  COL_VALOR_PROD = rawCols[2]  || ''; // Columna C = monto del pago
 
   render();
   document.getElementById('loading').style.display = 'none';
@@ -536,6 +616,7 @@ function startAutoRefresh() {
     loadData();
     loadMetas();
     loadGestion();
+    loadMetasV2();
     setTimeout(tick, 24 * 60 * 60 * 1000); // se repite cada 24h a partir de la primera medianoche
   }, msHastaProximaMedianoche());
 }
@@ -599,10 +680,28 @@ function onMetasData(resp) {
   if (allRows.length) { renderKPIs(); renderBuckets(); renderAsesores(); updateMetasBanner(); }
 }
 
+// Metas del equipo de asesores (comisiones)
+const METAS_ASESORES = {
+  minima:        70_344_567,
+  ideal:         80_896_252,
+  get umbralComision() { return this.ideal * 0.70; }, // $56,627,376
+};
+
+// Metas reales de agosto 2026 (hardcoded hasta que el Sheet las incluya)
+const METAS_AGOSTO_2026 = {
+  mensual:      242_688_755, // Meta Aspiracional
+  minima:       211_033_700, // Meta Mínima (base del % de cumplimiento)
+  diaria:   +(242_688_755 / 30).toFixed(0),
+  semanal:  +(242_688_755 / 4.33).toFixed(0),
+  provisional: false,
+};
+
 function getMeta(year, month) {
   const fromSheet = metasData[`${year}-${month}`];
   if (fromSheet?.mensual) return { ...fromSheet, provisional: false };
-  // Fallback provisional hasta que el Sheet tenga la meta cargada
+  // Agosto 2026: metas confirmadas
+  if (year === 2026 && month === 7) return METAS_AGOSTO_2026;
+  // Fallback para otros meses sin configurar
   return {
     mensual:  CONFIG.META_PROVISIONAL,
     diaria:   +(CONFIG.META_PROVISIONAL / 30).toFixed(0),
@@ -626,7 +725,7 @@ function updateMetasBanner() {
   });
   const totalMes = currMonthRows.reduce((s,r) => s + parseNum(r['VALOR']), 0);
   const pct   = totalMes / meta.mensual * 100;
-  const color = pct >= 100 ? '#0d8a55' : pct >= 70 ? '#b86e00' : '#c0391b';
+  const color = pct >= 100 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
   const minimaHtml = meta.minima
     ? ` · Meta Mínima <strong>${fmtM(meta.minima)}</strong>`
     : '';
@@ -656,16 +755,16 @@ function render() {
 }
 
 /* ─── KPI CARD ───────────────────────────────────── */
-function kpiCard(label, value, sub, color, metaPct, extraNote) {
+function kpiCard(label, value, sub, color, metaPct, extraNote, extraStyle) {
   const bar = metaPct != null ? `
     <div class="kpi-meta">
       <div class="kpi-meta-bar">
-        <div class="kpi-meta-fill" style="width:${Math.min(metaPct,100).toFixed(1)}%;background:${metaPct>=100?'#0d8a55':metaPct>=70?'#e5a020':'#d85a30'}"></div>
+        <div class="kpi-meta-fill" style="width:${Math.min(metaPct,100).toFixed(1)}%;background:${metaPct>=100?'#2DA888':metaPct>=70?'#e5a020':'#d85a30'}"></div>
       </div>
-      <span class="kpi-meta-pct ${metaPct>=100?'over':''}">${metaPct.toFixed(0)}% de la meta</span>
+      <span class="kpi-meta-pct ${metaPct>=100?'over':''}">${metaPct.toFixed(0)}%</span>
     </div>` : '';
   const extra = extraNote ? `<div class="kpi-extra">${extraNote}</div>` : '';
-  return `<div class="kpi">
+  return `<div class="kpi" style="${extraStyle||''}">
     <div class="kpi-label">${label}</div>
     <div class="kpi-value" style="color:${color||'#111'}">${value}</div>
     <div class="kpi-sub">${sub}</div>${bar}${extra}
@@ -773,23 +872,23 @@ function renderKPIs() {
   const currWeekBounds = getWeekBounds(currWeekInfo.year, currWeekInfo.week);
   const prevWeekBounds = getWeekBounds(prevWeekInfo.year, prevWeekInfo.week);
 
-  // Resetear columnas/visibilidad por si venimos de semanal o asesores
-  // (en 'mensual' no se toca: switchView ya oculta #kpi-grid vía CARTERA_ELS)
+  // Resetear columnas/visibilidad por si venimos de semanal
+  // (en vistas con contenido propio no se toca: switchView oculta #kpi-grid vía HIDE_CARTERA_VIEWS)
   grid.style.gridTemplateColumns = '';
-  if (currentView !== 'mensual') grid.style.display = '';
+  if (!HIDE_CARTERA_VIEWS.includes(currentView)) grid.style.display = '';
 
   if (currentView === 'diario') {
     const pctAyer = meta?.diaria && meta.diaria > 0 ? recAyer / meta.diaria * 100 : null;
     const pctDia  = meta?.diaria && meta.diaria > 0 ? promDia / meta.diaria * 100 : null;
     const cumplAyerStr   = pctAyer != null ? pctAyer.toFixed(1) + '%' : '0%';
-    const cumplAyerColor = pctAyer == null ? '#999' : pctAyer >= 100 ? '#0d8a55' : pctAyer >= 60 ? '#b86e00' : '#c0391b';
+    const cumplAyerColor = pctAyer == null ? '#999' : pctAyer >= 100 ? '#2DA888' : pctAyer >= 60 ? '#b86e00' : '#c0391b';
     const cumplAyerSub   = meta?.diaria
       ? `Meta diaria: ${fmtM(meta.diaria)} · ${ayerRows.length} pagos registrados`
       : 'Meta diaria: Por definir · frente a vencimientos del día';
     grid.innerHTML =
       kpiCard('Recaudado ayer',            recAyer > 0 ? fmtM(recAyer) : '—',
                                            `${ayerRows.length} pagos · corte día ${dCorte}`,
-                                           recAyer > 0 ? '#0d8a55' : '#999', pctAyer) +
+                                           recAyer > 0 ? '#2DA888' : '#999', pctAyer) +
       kpiCard('Promedio diario',           fmtM(promDia),
                                            meta?.diaria ? `meta diaria: ${fmtM(meta.diaria)}` : `promedio en ${MESES[todayM]}`,
                                            '#b86e00', pctDia) +
@@ -838,7 +937,7 @@ function renderKPIs() {
     const varPrevSn = prevSnCompVal > 0 ? ((prevSnVal - prevSnCompVal) / prevSnCompVal * 100) : null;
 
     const varStr = (pct, label) => pct != null
-      ? `<span style="color:${pct>=0?'#0d8a55':'#c0391b'};font-size:10px;font-weight:600">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% vs ${label}</span>`
+      ? `<span style="color:${pct>=0?'#2DA888':'#c0391b'};font-size:10px;font-weight:600">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% vs ${label}</span>`
       : `<span style="color:#bbb;font-size:10px">Sin dato anterior</span>`;
 
     const sprintRanges = ['días 1–10', 'días 11–20', `días 21–${diasMes}`];
@@ -848,13 +947,13 @@ function renderKPIs() {
       kpiCard(`Sprint ${currSN} de ${MESES[todayM]} (en curso)`,
                fmtM(currSnVal),
                `${sprintRanges[currSN-1]} · Sprint ${currSN} de ${MESES_CORTO[prevMonth2]}: ${fmtM(prevMoCurrSn)} · ${varStr(varCurrSn, MESES_CORTO[prevMonth2])}`,
-               '#0d8a55', pctSprintAct) +
+               '#2DA888', pctSprintAct) +
       kpiCard('% Cumplimiento sprint',
                pctSprintAct != null ? pctSprintAct.toFixed(1) + '%' : '0%',
                metaSnAct
                  ? `${meta.provisional ? 'Meta sprint (Provisional)' : 'Meta sprint'}: ${fmtM(metaSnAct)}`
                  : 'Meta del sprint: Por definir',
-               pctSprintAct == null ? '#999' : pctSprintAct >= 100 ? '#0d8a55' : pctSprintAct >= 60 ? '#b86e00' : '#c0391b',
+               pctSprintAct == null ? '#999' : pctSprintAct >= 100 ? '#2DA888' : pctSprintAct >= 60 ? '#b86e00' : '#c0391b',
                pctSprintAct) +
       kpiCard(prevSnTitle,
                fmtM(prevSnVal),
@@ -862,25 +961,30 @@ function renderKPIs() {
                '#111');
 
   } else if (currentView === 'mensual') {
-    const pctMens       = meta?.mensual ? totalMes / meta.mensual * 100 : null;
-    const pctMinima     = meta?.minima  ? totalMes / meta.minima  * 100 : null;
-    const mesPrevNombre = MESES[todayM===0?11:todayM-1];
-    const minimaNote    = pctMinima != null
-      ? `<strong style="color:${pctMinima>=100?'#0d8a55':'#b86e00'}">${pctMinima.toFixed(1)}%</strong> de la meta mínima (${fmtM(meta.minima)})`
-      : null;
+    // % se calcula sobre la Meta Mínima (base real de cumplimiento)
+    const pctBase   = meta?.minima   ? totalMes / meta.minima   * 100 : null;
+    const pctAspir  = meta?.mensual  ? totalMes / meta.mensual  * 100 : null;
+    const colBase   = pctBase == null ? '#999' : pctBase >= 95 ? '#2DA888' : pctBase >= 70 ? '#b86e00' : '#c0391b';
+    const metaLines = meta?.minima
+      ? `Meta Mínima: ${fmtM(meta.minima)} · Meta Aspiracional: ${fmtM(meta.mensual)}`
+      : (meta?.mensual ? `Meta: ${fmtM(meta.mensual)}` : 'Meta mensual: Por definir');
     const mesGrid = document.getElementById('mes-kpi-grid');
-    if (mesGrid) mesGrid.innerHTML =
-      kpiCard(`Recaudado a la fecha — ${MESES[todayM]}`,
-              fmtM(totalMes),
-              `${currMonthRows.length} pagos registrados · corte día ${dCorte}`,
-              '#0d8a55', pctMens) +
-      kpiCard('% Cumplimiento del mes',
-              pctMens != null ? pctMens.toFixed(1) + '%' : '0%',
-              meta?.mensual
-                ? `${fmtM(totalMes)} de ${fmtM(meta.mensual)}${meta.provisional ? ' · Meta Provisional' : ''}`
-                : 'Meta mensual: Por definir',
-              pctMens == null ? '#999' : pctMens >= 100 ? '#0d8a55' : pctMens >= 60 ? '#b86e00' : '#c0391b',
-              pctMens, minimaNote);
+    if (mesGrid) {
+      mesGrid.style.gridTemplateColumns = '1fr';
+      mesGrid.innerHTML = kpiCard(
+        `Recaudado a la fecha — ${MESES[todayM]}`,
+        fmtM(totalMes),
+        metaLines,
+        '#0A0E28', pctBase, null,
+        'border:2px solid #0A0E28;background:rgba(10,14,40,.03);box-shadow:0 4px 16px rgba(10,14,40,.10);');
+      // Oscurecer label y sub para máximo contraste sobre fondo tenue navy
+      const _lbl = mesGrid.querySelector('.kpi-label');
+      const _sub = mesGrid.querySelector('.kpi-sub');
+      const _pct = mesGrid.querySelector('.kpi-meta-pct');
+      if (_lbl) { _lbl.style.color = '#374151'; _lbl.style.fontWeight = '600'; }
+      if (_sub) _sub.style.color = '#374151';
+      if (_pct) _pct.style.color = colBase; // % cumplimiento mantiene color semáforo
+    }
 
   } else if (currentView === 'asesores') {
     // Fila superior de KPIs eliminada — la vista de Asesores solo muestra el listado individual.
@@ -898,34 +1002,41 @@ function renderBuckets() {
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
 
-  // Mensual usa su propio contenedor dentro de view-mensual
+  // Mensual: muestra 3 tarjetas de producto (Meta vs Recaudo real del mes vigente)
   if (currentView === 'mensual') {
     section.style.display = 'none';
-    const mesTitle = document.getElementById('mes-bucket-title');
-    const mesGrid  = document.getElementById('mes-bucket-grid');
-    if (!mesGrid) return;
+    const prodGrid = document.getElementById('mes-producto-grid');
+    if (!prodGrid) return;
 
     const currMonthRows = allRows.filter(r => {
       const d = parseDate(r['Fecha de ingreso']);
       return d && d.getFullYear() === todayY && d.getMonth() === todayM;
     });
-    const byB = {};
-    BUCKETS.forEach(b => { byB[b.key] = 0; });
-    currMonthRows.forEach(r => {
-      const estado = String(r[COL_ESTADO]||'').trim();
-      if (byB[estado] !== undefined) byB[estado] += parseNum(r['VALOR']);
-    });
-    if (mesTitle) mesTitle.textContent = 'Distribución por rango de mora — mes en curso';
-    mesGrid.innerHTML = '';
-    BUCKETS.forEach(b => {
-      const metaF      = getMetaFranja(b.key, todayY);
-      const metaTarget = metaF?.mensual || null;
-      mesGrid.innerHTML += bucketCard(b, byB[b.key], metaTarget, 'mensual');
-    });
+
+    prodGrid.innerHTML = Object.entries(PRODUCTOS).map(([, prod]) => {
+      const recaudo = COL_PRODUCTO
+        ? currMonthRows.filter(r =>
+            String(r[COL_PRODUCTO] || '').toLowerCase().includes(prod.keyword)
+          ).reduce((s, r) => s + prodVal(r), 0)
+        : 0;
+      const meta  = getMetaV2Total(prod.dataKey);
+      const pct   = meta ? recaudo / meta * 100 : null;
+      const col   = semProd(pct);
+      return `
+        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:18px 20px;border-top:3px solid ${col}">
+          <div style="font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${prod.nombre}</div>
+          <div style="font-size:22px;font-weight:800;color:${col};margin-bottom:2px">${fmtM(recaudo)}</div>
+          <div style="font-size:12px;color:#777;margin-bottom:10px">de ${meta ? fmtM(meta) : 'meta no disponible'}</div>
+          ${pct != null ? `
+            <div class="pbar"><div class="pfill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${col}"></div></div>
+            <div style="font-size:11px;font-weight:700;color:${col};margin-top:4px">${pct.toFixed(1)}%</div>
+          ` : ''}
+        </div>`;
+    }).join('');
     return;
   }
 
-  if (currentView === 'asesores') { section.style.display = 'none'; return; }
+  if (HIDE_CARTERA_VIEWS.includes(currentView)) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   grid.innerHTML = '';
 
@@ -981,7 +1092,7 @@ function renderBuckets() {
 
 function bucketCard(b, val, metaTarget, metaLabel) {
   const cumplPct  = metaTarget ? (val / metaTarget * 100) : null;
-  const barColor  = cumplPct == null ? '#ddd' : cumplPct >= 100 ? '#0d8a55' : cumplPct >= 60 ? '#e5a020' : '#d85a30';
+  const barColor  = cumplPct == null ? '#ddd' : cumplPct >= 100 ? '#2DA888' : cumplPct >= 60 ? '#e5a020' : '#d85a30';
   const pctLabel  = cumplPct != null ? `${cumplPct.toFixed(0)}% de ${fmtM(metaTarget)}` : `Meta ${metaLabel||''} por definir`;
   return `<div class="bucket" style="border-left-color:${b.color}">
     <div class="bucket-name" style="color:${b.color}">${b.label}</div>
@@ -1042,7 +1153,7 @@ function renderDiario() {
   const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
   const bgColors = days.map(d => {
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    return key === todayKey ? '#1D9E75' : '#9FE1CB';
+    return key === todayKey ? '#29DBA4' : '#C7FEED';
   });
   const maxY = Math.ceil(Math.max(...vals, promDia) * 1.3) || 1;
 
@@ -1115,7 +1226,7 @@ function renderDiarioAcumulado() {
     if (day <= todayD) {
       running += byDay[day] || 0;
       cumVals.push(+(running / 1_000_000).toFixed(6));
-      pointColors.push(day === todayD ? '#1D9E75' : '#5DCAA5');
+      pointColors.push(day === todayD ? '#29DBA4' : '#2DA888');
       pointRadii.push(day === todayD ? 5 : 2);
     } else {
       cumVals.push(null); // future days = no line
@@ -1148,7 +1259,7 @@ function renderDiarioAcumulado() {
       type: 'line',
       label: 'Recaudo acumulado',
       data: cumVals,
-      borderColor: '#1D9E75',
+      borderColor: '#29DBA4',
       borderWidth: 2.5,
       fill: true,
       backgroundColor: 'rgba(29,158,117,.08)',
@@ -1260,7 +1371,7 @@ function renderSemanal() {
 
   const SPRINT_LABELS = ['Sprint 1\n(1–10)', 'Sprint 2\n(11–20)', 'Sprint 3\n(21–fin)'];
 
-  const palette = ['#C8EDE2', '#9FE1CB', '#5DCAA5', '#1D9E75', '#0d6b47'];
+  const palette = ['#C7FEED', '#29DBA4', '#2DA888', '#0A0E28', '#065f46'];
   const colorFor = idx => palette[Math.min(idx, palette.length - 1)];
 
   const datasets = months.map(({ year, month }, mi) => {
@@ -1343,10 +1454,87 @@ function renderSemanal() {
 }
 
 /* ─── MENSUAL: todas las meses apilados ──────────── */
-function renderMensual() {
-  destroyChart('mensual');
+function renderMensualBanner() {
+  const banner = document.getElementById('mensual-summary-banner');
+  if (!banner) return;
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+  const meta   = getMeta(todayY, todayM);
+  const totalMes = allRows
+    .filter(r => { const d = parseDate(r['Fecha de ingreso']); return d && d.getFullYear()===todayY && d.getMonth()===todayM; })
+    .reduce((s, r) => s + parseNum(r['VALOR']), 0);
+  const pct    = meta?.minima ? totalMes / meta.minima * 100 : (meta?.mensual ? totalMes / meta.mensual * 100 : null);
+  const colPct = pct == null ? '#b45309' : pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
+  const pctHtml = pct != null
+    ? `<strong style="color:${colPct}">${pct.toFixed(1)}% cumplido</strong>`
+    : '<span style="color:#999">% sin meta</span>';
+  const items = [
+    meta?.mensual ? `Meta Ideal <strong>${fmtM(meta.mensual)}</strong>` : null,
+    meta?.minima  ? `Meta Mínima <strong>${fmtM(meta.minima)}</strong>` : null,
+    `Recaudado <strong>${fmtM(totalMes)}</strong>`,
+    pctHtml,
+  ].filter(Boolean).join(' <span style="color:#29DBA4;margin:0 4px">·</span> ');
+  banner.innerHTML = `<span style="font-size:16px">🎯</span> ${items}`;
+}
 
-  // Group by month with bucket breakdown
+function renderMensualSprints() {
+  const grid = document.getElementById('mes-sprints-grid');
+  if (!grid) return;
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth();
+  const meta   = getMeta(todayY, todayM);
+  const metaMensual = meta?.minima || meta?.mensual || null;
+
+  // Sprint boundaries: 1→days 1-10, 2→11-20, 3→21-end
+  const sprintDays = [[1,10],[11,20],[21,31]];
+  const sprintNames = ['Sprint 1', 'Sprint 2', 'Sprint 3'];
+  const sprintRanges = ['Días 1 al 10', 'Días 11 al 20', 'Días 21 al fin'];
+
+  const currRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear()===todayY && d.getMonth()===todayM;
+  });
+
+  const todayDay = today.getDate();
+  const daysInMonth = new Date(todayY, todayM+1, 0).getDate();
+
+  grid.innerHTML = '';
+  sprintDays.forEach(([s, e], i) => {
+    const end = Math.min(e, daysInMonth);
+    const sprintRows = currRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getDate() >= s && d.getDate() <= end;
+    });
+    const val = sprintRows.reduce((sum, r) => sum + parseNum(r['VALOR']), 0);
+
+    // Meta pesada estratégicamente: S1=25%, S2=35%, S3=40%
+    const SPRINT_WEIGHTS = [0.25, 0.35, 0.40];
+    const metaSprint = metaMensual ? metaMensual * SPRINT_WEIGHTS[i] : null;
+    const pct = metaSprint ? val / metaSprint * 100 : null;
+    const col = pct == null ? '#999' : pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
+
+    const isActive = todayDay >= s && todayDay <= end;
+    const isFuture = todayDay < s;
+
+    grid.innerHTML += `
+      <div style="background:${isActive?'#f0fdfb':'#fafafa'};border:1.5px solid ${isActive?'#29DBA4':'#e8edf2'};border-radius:12px;padding:16px 18px;">
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${sprintNames[i]}</div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px">${sprintRanges[i]}</div>
+        <div style="font-size:22px;font-weight:800;color:#1a1a1a;margin-bottom:6px">${fmtM(val)}</div>
+        ${metaSprint ? `<div style="font-size:11px;color:#888;margin-bottom:8px">Meta proporcional: ${fmtM(metaSprint)}</div>` : ''}
+        ${pct != null && !isFuture
+          ? `<div style="font-size:13px;font-weight:700;color:${col}">${pct.toFixed(1)}%</div>`
+          : isFuture ? `<div style="font-size:12px;color:#ccc">Próximo</div>` : ''}
+        ${!isFuture ? `<div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${Math.min(pct||0,100).toFixed(1)}%;background:${col}"></div></div>` : ''}
+      </div>`;
+  });
+}
+
+function renderMensual() {
+  destroyChart('mensual-diario');
+  renderMensualBanner();
+
+  // Group by month for historical cards
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
   const byMonthMap = {};
@@ -1355,99 +1543,123 @@ function renderMensual() {
     if (!d) return;
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     if (!byMonthMap[key]) {
-      byMonthMap[key] = { year:d.getFullYear(), month:d.getMonth(), val:0, txn:0,
-                          buckets: Object.fromEntries(BUCKETS.map(b=>[b.key,0])) };
+      byMonthMap[key] = { year:d.getFullYear(), month:d.getMonth(), val:0 };
     }
-    const val    = parseNum(r['VALOR']);
-    const estado = String(r[COL_ESTADO]||'').trim();
-    byMonthMap[key].val += val;
-    byMonthMap[key].txn++;
-    if (byMonthMap[key].buckets[estado] !== undefined) byMonthMap[key].buckets[estado] += val;
+    byMonthMap[key].val += parseNum(r['VALOR']);
   });
 
   const sorted = Object.values(byMonthMap).sort((a,b) =>
     a.year !== b.year ? a.year-b.year : a.month-b.month
   );
+  const historical = sorted.filter(m => !(m.year === todayY && m.month === todayM));
 
-  // Cards
-  const maxVal = Math.max(...sorted.map(m=>m.val),1);
+  // Hilera 1: Cards históricas
+  const maxVal = Math.max(...historical.map(m=>m.val), 1);
   const cards  = document.getElementById('mes-cards');
-  cards.innerHTML = '';
-  sorted.forEach((m, i) => {
-    const prev  = i > 0 ? sorted[i-1] : null;
-    const delta = prev && prev.val>0 ? ((m.val-prev.val)/prev.val*100) : null;
-    const isCurr = m.year===todayY && m.month===todayM;
-    const dH   = delta!=null ? `<div class="mes-delta" style="color:${delta>=0?'#0d8a55':'#c0391b'}">${delta>=0?'▲':'▼'} ${Math.abs(delta).toFixed(1)}%</div>` : '';
-    cards.innerHTML += `
-      <div class="mes-card ${isCurr?'active-mes':''}">
-        <div class="mes-label">${MESES_CORTO[m.month].toUpperCase()} ${m.year}</div>
-        <div class="mes-val">${fmtM(m.val)}</div>
-        <div class="mes-txn">${m.txn} pagos</div>
-        ${dH}
-        <div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${(m.val/maxVal*100).toFixed(1)}%;background:#1D9E75"></div></div>
-      </div>`;
+  if (cards) {
+    cards.innerHTML = '';
+    historical.forEach(m => {
+      const metaM  = getMeta(m.year, m.month);
+      const pctM   = metaM?.minima ? m.val / metaM.minima * 100
+                   : metaM?.mensual ? m.val / metaM.mensual * 100 : null;
+      const colPct = pctM == null ? '#999' : pctM >= 95 ? '#2DA888' : pctM >= 70 ? '#b86e00' : '#c0391b';
+      const pctHtml = pctM != null
+        ? `<div style="font-size:11px;font-weight:700;color:${colPct};margin-top:2px">${pctM.toFixed(1)}%</div>` : '';
+      cards.innerHTML += `
+        <div class="mes-card">
+          <div class="mes-label">${MESES_CORTO[m.month].toUpperCase()} ${m.year}</div>
+          <div class="mes-val">${fmtM(m.val)}</div>
+          ${pctHtml}
+          <div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${(m.val/maxVal*100).toFixed(1)}%;background:#29DBA4"></div></div>
+        </div>`;
+    });
+  }
+
+  // Hilera 3: Sprint cards
+  renderMensualSprints();
+
+  // Hilera 4: últimos 10 días con datos
+  const currRows = allRows.filter(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    return d && d.getFullYear()===todayY && d.getMonth()===todayM;
   });
 
-  // Legend
-  document.getElementById('mensual-legend').innerHTML =
-    BUCKETS.map(b=>`<span class="li"><span class="lsq" style="background:${b.color}"></span>${b.label}</span>`).join('');
+  // Group by day
+  const byDay = {};
+  currRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const day = d.getDate();
+    byDay[day] = (byDay[day] || 0) + parseNum(r['VALOR']);
+  });
 
-  const labels   = sorted.map(m => MESES_CORTO[m.month]+" '"+String(m.year).slice(2));
-  const totals   = sorted.map(m => m.val);
-  const maxTotal = Math.max(...totals, 1);
-  const datasets = BUCKETS.map((b,bi) => ({
-    label: b.label,
-    data:  sorted.map(m => +((m.buckets[b.key]||0)/1_000_000).toFixed(3)),
-    backgroundColor: b.color,
-    stack: 'mora',
-    borderRadius: bi===BUCKETS.length-1 ? { topLeft:4, topRight:4 } : 0,
-    borderSkipped: false,
-    datalabels: { display: false },
-  }));
-  const maxY = Math.ceil(maxTotal/1_000_000*1.3) || 1;
+  // Get last 10 days that have data
+  const daysWithData = Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+  const last10 = daysWithData.slice(-10);
 
-  const totalLabelsPlugin = {
-    id: 'mensualTotals',
-    afterDatasetsDraw(chart) {
-      const { ctx, scales } = chart;
-      const lastMeta = chart.getDatasetMeta(BUCKETS.length-1);
-      ctx.save();
-      ctx.font = '600 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
-      ctx.fillStyle = '#444'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      lastMeta.data.forEach((bar, i) => {
-        const total = datasets.reduce((s,ds) => s+(ds.data[i]||0), 0);
-        if (total <= 0) return;
-        const stackTop = scales.y.getPixelForValue(
-          datasets.reduce((s,ds) => s+(ds.data[i]||0), 0)
-        );
-        ctx.fillText(fmtChart(total), bar.x, stackTop-4);
-      });
-      ctx.restore();
-    }
-  };
+  const todayDay = today.getDate();
+  const labels10 = last10.map(d => `${d}/${todayM+1}`);
+  const vals10   = last10.map(d => byDay[d] || 0);
+  const avg10    = vals10.length ? vals10.reduce((s,v)=>s+v,0)/vals10.length : 0;
 
-  charts['mensual'] = new Chart(document.getElementById('chart-mensual'), {
+  const bgColors = last10.map((d, i) =>
+    i >= last10.length - 2 ? '#047857' : '#93c5bd');
+  const borderColors = last10.map((d, i) =>
+    i >= last10.length - 2 ? '#065f46' : '#5fa89e');
+
+  const canvasDiario = document.getElementById('chart-mensual-diario');
+  if (!canvasDiario) return;
+
+  charts['mensual-diario'] = new Chart(canvasDiario, {
     type: 'bar',
-    data: { labels, datasets },
-    plugins: [totalLabelsPlugin],
+    data: {
+      labels: labels10,
+      datasets: [
+        {
+          label: 'Recaudo',
+          data: vals10.map(v => +(v/1_000_000).toFixed(3)),
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 4,
+          datalabels: {
+            display: true,
+            anchor: 'end', align: 'top',
+            font: { size: 10, weight: '600' },
+            color: '#444',
+            formatter: v => fmtChart(v),
+          }
+        },
+        {
+          label: 'Promedio',
+          data: last10.map(() => +(avg10/1_000_000).toFixed(3)),
+          type: 'line',
+          borderColor: '#d97706',
+          borderDash: [5,4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          datalabels: { display: false },
+        }
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 20 } },
+      layout: { padding: { top: 24 } },
       plugins: {
         legend: { display: false },
-        datalabels: { display: false },
         tooltip: {
-          mode: 'index', intersect: false,
           callbacks: {
-            label: c => ` ${c.dataset.label}: ${fmtM(c.parsed.y*1_000_000)}`,
-            footer: items => ` Total: ${fmtM(items.reduce((s,i)=>s+i.parsed.y,0)*1_000_000)}`
+            label: c => c.dataset.label === 'Promedio'
+              ? ` Promedio: ${fmtM(avg10)}`
+              : ` Recaudo: ${fmtM(c.parsed.y*1_000_000)}`
           }
         }
       },
       scales: {
-        x: { stacked:true, ticks:{ color:'#999', font:{size:11} }, grid:{display:false} },
-        y: { stacked:true, ticks:{ color:'#bbb', font:{size:11}, callback:v=>fmtAxis(v) },
-             grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxY }
+        x: { ticks:{ color:'#999', font:{size:11} }, grid:{display:false} },
+        y: { ticks:{ color:'#bbb', font:{size:11}, callback:v=>fmtAxis(v) },
+             grid:{ color:'rgba(0,0,0,.04)' }, min:0 }
       }
     }
   });
@@ -1455,7 +1667,7 @@ function renderMensual() {
 
 /* ─── ASESORES: mes en curso ─────────────────────── */
 function asesorMetaRow(pct, metaVal, label) {
-  const color = pct == null ? '#ddd' : pct >= 100 ? '#1D9E75' : pct >= 60 ? '#EF9F27' : '#D85A30';
+  const color = pct == null ? '#ddd' : pct >= 100 ? '#29DBA4' : pct >= 60 ? '#EF9F27' : '#D85A30';
   const text  = pct != null
     ? `${pct.toFixed(0)}% ${label} · ${fmtM(metaVal)}`
     : `${label}: meta por definir`;
@@ -1469,158 +1681,186 @@ function renderAsesores() {
   destroyChart('asesores');
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
-  const currSN = sprintOfMonth(today.getDate());
 
   const currMonthRows = allRows.filter(r => {
     const d = parseDate(r['Fecha de ingreso']);
     return d && d.getFullYear()===todayY && d.getMonth()===todayM;
   });
-  const allAsesores = [...new Set(allRows.map(r=>String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
-  const byAsesor    = {};
-  allAsesores.forEach(a => { byAsesor[a] = { valMes:0, valSprint:0, acumSprint1:0, acumSprint2:0 }; });
+
+  // Colores y labels de los 3 productos
+  const PROD_KEYS = [
+    { key:'cosecha',         label:'Cosecha +',      color:'#29DBA4', kw:'cosecha'  },
+    { key:'agrappay',        label:'AgrapPay',        color:'#0A0E28', kw:'agrap'    },
+    { key:'establecimiento', label:'Establecimiento', color:'#0FD6F4', kw:'establec' },
+  ];
+
+  // Acumular por asesor × producto
+  const byAsesor = {};
   currMonthRows.forEach(r => {
     const a = String(r[COL_ASESOR]||'').trim();
-    if (!a||a==='#N/D') return;
-    const d   = parseDate(r['Fecha de ingreso']);
-    const val = parseNum(r['VALOR']);
-    byAsesor[a].valMes += val;
-    if (!d) return;
-    const sn = sprintOfMonth(d.getDate());
-    if (sn === currSN) byAsesor[a].valSprint += val;
-    // Acumulado hasta el cierre de cada sprint (para las líneas de corte en la gráfica)
-    if (sn <= 1) byAsesor[a].acumSprint1 += val;
-    if (sn <= 2) byAsesor[a].acumSprint2 += val;
-  });
-  const asesores = Object.entries(byAsesor).map(([name,d])=>({name,...d})).sort((a,b)=>b.valMes-a.valMes);
-
-  // Cards
-  const cards = document.getElementById('asesor-cards');
-  cards.innerHTML = '';
-  asesores.forEach((a,i) => {
-    const pctSemanal = metaAsesorSemanal ? (a.valSprint / metaAsesorSemanal * 100) : null;
-    const pctMensual = metaAsesorMensual ? (a.valMes   / metaAsesorMensual * 100) : null;
-    cards.innerHTML += `
-      <div class="asesor-card${i===0&&a.valMes>0?' leader':''}">
-        <div class="asesor-name" title="${a.name}">${i+1}. ${a.name}</div>
-        <div class="asesor-val">${a.valMes > 0 ? fmtM(a.valMes) : '—'}</div>
-        ${asesorMetaRow(pctSemanal, metaAsesorSemanal, 'meta s.')}
-        ${asesorMetaRow(pctMensual, metaAsesorMensual, 'meta m.')}
-      </div>`;
+    if (!a || a==='#N/D') return;
+    if (!byAsesor[a]) byAsesor[a] = { total:0, cosecha:0, agrappay:0, establecimiento:0 };
+    const val  = parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']);
+    const prod = String(r[COL_PRODUCTO]||'').toLowerCase();
+    byAsesor[a].total += val;
+    PROD_KEYS.forEach(p => { if (prod.includes(p.kw)) byAsesor[a][p.key] += val; });
   });
 
-  if (!asesores.length) return;
+  const asesores = Object.entries(byAsesor)
+    .map(([name, d]) => ({ name, ...d }))
+    .filter(a => a.total > 0)
+    .sort((a, b) => b.total - a.total);
 
-  // Eje y barras referenciados contra la Meta Asesor Mensual (acumulado del mes, no el sprint aislado)
-  const metaMensVal = metaAsesorMensual ? +(metaAsesorMensual / 1_000_000).toFixed(3) : null;
-  const maxV = Math.max(...asesores.map(a=>a.valMes/1_000_000), metaMensVal || 0) * 1.25 || 1;
+  if (!asesores.length) {
+    const tabla = document.getElementById('asesor-tabla');
+    if (tabla) tabla.innerHTML = '<p style="color:#999;font-size:13px">Sin datos para el mes vigente.</p>';
+    return;
+  }
 
-  const barColor = a => {
-    if (!metaAsesorMensual) return '#9FE1CB';
-    const pct = a.valMes / metaAsesorMensual * 100;
-    return pct >= 100 ? '#1D9E75' : pct >= 60 ? '#EF9F27' : '#D85A30';
-  };
+  // Líneas de referencia en M de pesos
+  const lineComision = +(METAS_ASESORES.umbralComision / 1_000_000).toFixed(3);
+  const lineIdeal    = +(METAS_ASESORES.ideal           / 1_000_000).toFixed(3);
+  const maxV = Math.max(...asesores.map(a => a.total/1_000_000), lineIdeal) * 1.15;
 
-  // Línea punteada vertical marcando la Meta Asesor Mensual (cruza todas las barras)
-  const metaMensualLinePlugin = {
-    id: 'metaMensualLine',
+  // Plugin de líneas horizontales punteadas
+  const refLinesPlugin = {
+    id: 'asesorRefLines',
     afterDraw(chart) {
-      if (!metaMensVal) return;
       const { ctx, chartArea, scales } = chart;
-      const x = scales.x.getPixelForValue(metaMensVal);
-      if (x < chartArea.left || x > chartArea.right) return;
-      ctx.save();
-      ctx.strokeStyle = '#b86e00';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(x, chartArea.top);
-      ctx.lineTo(x, chartArea.bottom);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#b86e00';
-      ctx.font = '700 10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Meta mensual: ${fmtChart(metaMensVal)}`, x, chartArea.top - 6);
-      ctx.restore();
-    }
-  };
-
-  // Marcas verticales, DENTRO de cada barra, con el acumulado propio de ese asesor
-  // al cierre del Sprint 1 y del Sprint 2 (pacing real vs. la meta mensual final)
-  const sprintCutoffPlugin = {
-    id: 'sprintCutoffs',
-    afterDatasetsDraw(chart) {
-      const { ctx, scales, chartArea } = chart;
-      const meta = chart.getDatasetMeta(0);
-      const drawTick = (bar, val, color) => {
-        if (!bar || !val) return;
-        const x = scales.x.getPixelForValue(+(val / 1_000_000).toFixed(3));
-        if (x < chartArea.left || x > chartArea.right) return;
-        const yTop = bar.y - bar.height / 2 + 2;
-        const yBot = bar.y + bar.height / 2 - 2;
+      const drawLine = (yVal, color, label) => {
+        const y = scales.y.getPixelForValue(yVal);
+        if (y < chartArea.top || y > chartArea.bottom) return;
         ctx.save();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 4]);
         ctx.beginPath();
-        ctx.moveTo(x, yTop);
-        ctx.lineTo(x, yBot);
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
         ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = color;
+        ctx.font = '700 10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(label, chartArea.right - 4, y - 3);
         ctx.restore();
       };
-      asesores.forEach((a, i) => {
-        drawTick(meta.data[i], a.acumSprint1, '#0d6b47');
-        drawTick(meta.data[i], a.acumSprint2, '#b86e00');
-      });
+      drawLine(lineIdeal,    '#0A0E28', '100% Meta Ideal');
+      drawLine(lineComision, '#ef4444', '📍 Línea de Comisión — 70%');
     }
   };
 
-  document.getElementById('asesores-legend').innerHTML = `
-    <span class="li"><span class="lsq" style="background:#0d6b47"></span>Cierre Sprint 1</span>
-    <span class="li"><span class="lsq" style="background:#b86e00"></span>Cierre Sprint 2</span>
-    <span class="li"><span class="lsq" style="background:#EF9F27"></span>Meta mensual (línea punteada)</span>`;
+  document.getElementById('asesores-legend').innerHTML =
+    PROD_KEYS.map(p =>
+      `<span class="li"><span class="lsq" style="background:${p.color}"></span>${p.label}</span>`
+    ).join('') +
+    `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión (70%)</span>` +
+    `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Ideal (100%)</span>`;
 
   charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
     type: 'bar',
     data: {
-      labels: asesores.map(a=>a.name),
-      datasets: [{
-        data: asesores.map(a=>+(a.valMes/1_000_000).toFixed(3)),
-        backgroundColor: asesores.map(barColor),
-        borderRadius: 5,
-        datalabels: {
-          display: true, anchor:'end', align:'end', color:'#444',
-          font:{ size:11, weight:'600' }, clip:false,
-          formatter: v => v>0?fmtChart(v):'—',
-        }
-      }]
+      labels: asesores.map(a => a.name),
+      datasets: PROD_KEYS.map((p, pi) => ({
+        label: p.label,
+        data:  asesores.map(a => +(a[p.key]/1_000_000).toFixed(3)),
+        backgroundColor: p.color,
+        stack: 'prod',
+        borderRadius: pi === PROD_KEYS.length - 1 ? { topLeft:4, topRight:4 } : 0,
+        borderSkipped: false,
+        datalabels: { display: false },
+      }))
     },
-    plugins: [metaMensualLinePlugin, sprintCutoffPlugin],
+    plugins: [refLinesPlugin, {
+      id: 'asesorTotals',
+      afterDatasetsDraw(chart) {
+        const { ctx, scales } = chart;
+        const lastMeta = chart.getDatasetMeta(PROD_KEYS.length - 1);
+        ctx.save();
+        ctx.font = '700 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+        ctx.fillStyle = '#222';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        asesores.forEach((a, i) => {
+          const bar = lastMeta.data[i];
+          if (!bar || a.total <= 0) return;
+          const topY = scales.y.getPixelForValue(a.total / 1_000_000);
+          ctx.fillText(fmtM(a.total), bar.x, topY - 4);
+        });
+        ctx.restore();
+      }
+    }],
     options: {
-      responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      layout:{ padding:{ top:24, right:60 } },
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 28 } },
       plugins: {
-        legend:{display:false}, datalabels:{},
-        tooltip:{ callbacks:{
-          label:c=>{
-            const val = c.parsed.x * 1_000_000;
-            const pct = metaAsesorMensual ? ` · ${(val/metaAsesorMensual*100).toFixed(0)}% de la meta mensual` : '';
-            return ` Acumulado: ${fmtM(val)}${pct}`;
-          },
-          afterLabel:c=>{
-            const a = asesores[c.dataIndex];
-            const lineas = [];
-            if (a.acumSprint1) lineas.push(` Cierre Sprint 1: ${fmtM(a.acumSprint1)}`);
-            if (a.acumSprint2) lineas.push(` Cierre Sprint 2: ${fmtM(a.acumSprint2)}`);
-            return lineas;
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            title: items => items[0]?.label || '',
+            label: c => ` ${c.dataset.label}: ${fmtM(c.parsed.y * 1_000_000)}`,
+            footer: items => {
+              const total = items.reduce((s,i) => s + i.parsed.y, 0);
+              const pct   = (total / (METAS_ASESORES.ideal/1_000_000) * 100).toFixed(1);
+              return [`Total: ${fmtM(total*1_000_000)} · ${pct}% Meta Ideal`];
+            }
           }
-        } }
+        }
       },
       scales: {
-        x:{ ticks:{color:'#bbb',font:{size:11},callback:v=>fmtAxis(v)}, grid:{color:'rgba(0,0,0,.04)'}, min:0, max:maxV },
-        y:{ ticks:{color:'#444',font:{size:11}}, grid:{display:false} }
+        x: { stacked:true, ticks:{ color:'#555', font:{size:11} }, grid:{display:false} },
+        y: { stacked:true, min:0, max:maxV,
+             ticks:{ color:'#bbb', font:{size:11}, callback:v=>fmtAxis(v) },
+             grid:{ color:'rgba(0,0,0,.04)' } }
       }
     }
   });
+
+  // Tabla de detalle
+  const tabla = document.getElementById('asesor-tabla');
+  if (!tabla) return;
+  const umbral = METAS_ASESORES.umbralComision;
+  const ideal  = METAS_ASESORES.ideal;
+  tabla.innerHTML = `
+    <div class="section-title" style="margin-bottom:10px">Detalle por Asesor</div>
+    <div style="overflow-x:auto">
+      <table class="gestion-table" style="width:100%">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Asesor</th>
+            <th style="text-align:right">Recaudo Total</th>
+            <th style="text-align:right">Cosecha +</th>
+            <th style="text-align:right">AgrapPay</th>
+            <th style="text-align:right">Establecimiento</th>
+            <th style="text-align:right">% Cumpl.</th>
+            <th style="text-align:center">Comisión</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${asesores.map((a, i) => {
+            const pct    = a.total / ideal * 100;
+            const comisiona = a.total >= umbral;
+            const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
+            return `<tr style="${i%2===0?'background:#fafafa':''}">
+              <td style="color:#aaa;font-size:11px">${i+1}</td>
+              <td style="font-weight:600;color:#111">${a.name}</td>
+              <td style="text-align:right;font-weight:700">${fmtM(a.total)}</td>
+              <td style="text-align:right;color:#29DBA4">${a.cosecha>0?fmtM(a.cosecha):'—'}</td>
+              <td style="text-align:right;color:#0A0E28">${a.agrappay>0?fmtM(a.agrappay):'—'}</td>
+              <td style="text-align:right;color:#0FD6F4">${a.establecimiento>0?fmtM(a.establecimiento):'—'}</td>
+              <td style="text-align:right;font-weight:700;color:${colPct}">${pct.toFixed(1)}%</td>
+              <td style="text-align:center;font-size:13px">${comisiona
+                ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>'
+                : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 /* ─── GESTIÓN DE ASESORES: carga desde la pestaña "Gestión Asesores" ─── */
@@ -1700,7 +1940,7 @@ function drawGauge(canvasId, pct, chartKey) {
   destroyChart(chartKey);
   const el = document.getElementById(canvasId);
   if (!el) return;
-  const color = pct >= 70 ? '#1D9E75' : pct >= 40 ? '#e5a020' : '#d85a30';
+  const color = pct >= 70 ? '#29DBA4' : pct >= 40 ? '#e5a020' : '#d85a30';
   charts[chartKey] = new Chart(el, {
     type: 'doughnut',
     data: {
@@ -1891,6 +2131,113 @@ function renderGestionAsesores() {
   });
 }
 
+/* ─── METAS V2: vista ejecutiva por producto ("regla de los 20 segundos") ───
+   La pestaña "Metas_V2" tiene 3 secciones apiladas verticalmente (COSECHA +,
+   AGRAPPAY, ESTABLECIMIENTO), cada una con su propia fila de título + encabezado,
+   por eso se pide con &headers=0 (si no, Google intenta autodetectar UNA sola
+   fila de encabezado y se traga casi todos los datos reales). */
+let metasV2Data = null; // { cosecha:[...buckets], agrappay:[...buckets], establecimiento:{...} }
+
+// Los montos vienen a veces con puntos y a veces con comas como separador de miles
+// (sin decimales reales), y los % a veces con coma decimal y a veces con punto.
+function parseMontoV2(val) {
+  const str = String(val ?? '').trim();
+  if (!str) return 0;
+  return parseFloat(str.replace(/[.,]/g, '')) || 0;
+}
+function parsePctV2(val) {
+  let str = String(val ?? '').trim().replace('%', '').trim();
+  if (!str) return null;
+  str = str.includes(',') && !str.includes('.') ? str.replace(',', '.') : str.replace(/,/g, '');
+  const n = parseFloat(str);
+  return isNaN(n) ? null : n;
+}
+
+function loadMetasV2() {
+  if (!CONFIG.METASV2_GID) return;
+  const old = document.getElementById('script-metasv2');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-metasv2';
+  // headers=0: desactiva la autodetección de encabezado de Google (rompe con secciones apiladas)
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onMetasV2Data&gid=${CONFIG.METASV2_GID}&headers=0&_=${Date.now()}`;
+  s.onerror = () => { metasV2Data = null; renderMetasV2(); };
+  document.head.appendChild(s);
+}
+
+function onMetasV2Data(resp) {
+  if (resp.status !== 'ok') { metasV2Data = null; renderMetasV2(); return; }
+  // Estructura: cada producto tiene su propio total (fila Totales, Col H) y sus propias franjas
+  const secciones = {
+    cosecha:         { total: 0, franjas: [] },
+    agrappay:        { total: 0, franjas: [] },
+    establecimiento: { total: 0, franjas: [] },
+  };
+  let seccionActual = null;
+  let encabezadoLeido = false;
+
+  (resp.table.rows || []).forEach(row => {
+    const c = row.c || [];
+    const colA = String(c[0]?.v ?? '').trim();
+    const colAUpper = colA.toUpperCase();
+
+    // Detectar encabezado de sección (fila de título de producto)
+    if (colAUpper.startsWith('COSECHA'))          { seccionActual = 'cosecha';         encabezadoLeido = false; return; }
+    if (colAUpper.includes('AGRAPP'))             { seccionActual = 'agrappay';        encabezadoLeido = false; return; }
+    if (colAUpper.startsWith('ESTABLECIMIENTO'))  { seccionActual = 'establecimiento'; encabezadoLeido = false; return; }
+    if (!seccionActual) return;
+
+    if (!encabezadoLeido) { encabezadoLeido = true; return; } // saltar fila de cabeceras de columna
+    if (!colA) return; // fila vacía
+
+    const metaH = parseMontoV2(c[7]?.v); // Columna H = Ajuste Meta
+
+    // Fila de totales → guarda el total de la sección
+    if (colA.toLowerCase().includes('total')) {
+      secciones[seccionActual].total = metaH;
+      return;
+    }
+
+    // Fila de franja → añade al array de franjas de la sección
+    secciones[seccionActual].franjas.push({ label: colA, meta: metaH });
+  });
+
+  metasV2Data = secciones;
+  renderMetasV2();
+}
+
+// Semáforo a nivel de bucket individual (los únicos indicadores de color que quedan)
+function renderProductoCardV2(nombre, seccion) {
+  if (!seccion || !seccion.franjas || !seccion.franjas.length) return '';
+  const bucketsHTML = seccion.franjas.map((f, i) => {
+    const color = PROD_FRANJA_PALETTE[i % PROD_FRANJA_PALETTE.length];
+    return `<div class="bucket-mini" style="border-left-color:${color}">
+      <div class="bucket-mini-name">${f.label}</div>
+      <div class="bucket-mini-val">${fmtM(f.meta)}</div>
+      <div class="bucket-mini-meta" style="margin-top:4px">Ajuste Meta (Col H)</div>
+    </div>`;
+  }).join('');
+  const totalMeta = seccion.total;
+  return `<div class="prodcard-box">
+    <div class="prodcard-title">${nombre}${totalMeta ? ` — Meta total: ${fmtM(totalMeta)}` : ''}</div>
+    <div class="prodcard-buckets">${bucketsHTML}</div>
+  </div>`;
+}
+
+function renderMetasV2() {
+  const container = document.getElementById('metasv2-container');
+  if (!container) return;
+  if (!metasV2Data) {
+    container.innerHTML = '<p style="color:#999;font-size:12px">Cargando datos de Metas V2…</p>';
+    return;
+  }
+  const html =
+    renderProductoCardV2('COSECHA +', metasV2Data.cosecha) +
+    renderProductoCardV2('AGRAPPAY', metasV2Data.agrappay) +
+    renderProductoCardV2('ESTABLECIMIENTO', metasV2Data.establecimiento);
+  container.innerHTML = html || '<p style="color:#999;font-size:12px">Sin datos disponibles en Metas_V2.</p>';
+}
+
 /* ─── TRANSICIÓN ─────────────────────────────────── */
 const TRANS_ITEMS = [
   { id: 'oficina',    nombre: 'Oficina',                      nota: 'Tentativo hasta el 15 de julio', responsable: 'Por asignar', pct: 0 },
@@ -1910,8 +2257,8 @@ function semaforo(pct) {
 }
 
 function barColor(pct) {
-  if (pct === 100) return '#1D9E75';
-  if (pct >= 80)   return '#5DCAA5';
+  if (pct === 100) return '#29DBA4';
+  if (pct >= 80)   return '#2DA888';
   if (pct >= 26)   return '#e5a020';
   if (pct > 0)     return '#c0391b';
   return '#d0d0d0';
@@ -1933,7 +2280,7 @@ function renderTransicion() {
   const totalPct = Math.round(TRANS_ITEMS.reduce((s, i) => s + i.pct, 0) / TRANS_ITEMS.length);
   const totalSem = semaforo(totalPct);
   const srcLabel = CONFIG.TRANS_GID
-    ? '<span style="font-size:10px;color:#1D9E75;margin-top:4px;display:block">● Conectado a Google Sheets</span>'
+    ? '<span style="font-size:10px;color:#29DBA4;margin-top:4px;display:block">● Conectado a Google Sheets</span>'
     : '<span style="font-size:10px;color:#e5a020;margin-top:4px;display:block">● Edición local · conecta el Sheet para persistir</span>';
   document.getElementById('trans-overall').innerHTML = `
     <div class="trans-overall-pct" style="color:${barColor(totalPct)}">${totalPct}%</div>
@@ -2033,29 +2380,381 @@ function updateTransObs(id, val) {
   if (el) el.innerHTML = val ? val : '<span style="color:#ccc;font-style:italic">Sin observaciones</span>';
 }
 
+/* ─── PRODUCTOS: Cosecha+, AgrapPay, Establecimiento ────────────────────────
+   Fuente de metas  → metasV2Data (ya cargado desde Metas_V2)
+   Fuente de pagos  → allRows filtrado por COL_PRODUCTO (columna E de Pagos)
+   Franja de mora   → COL_MORA_PROD (columna AB de Pagos)                    */
+
+function getMetaV2Total(dataKey) {
+  if (!metasV2Data) return null;
+  const d = metasV2Data[dataKey];
+  return d ? (d.total || null) : null;
+}
+
+// Devuelve las franjas con su meta para el producto indicado
+function getMetaV2Franjas(dataKey) {
+  if (!metasV2Data) return [];
+  const d = metasV2Data[dataKey];
+  return d ? (d.franjas || []) : [];
+}
+
+// Paleta de colores para franjas personalizadas (por posición)
+const PROD_FRANJA_PALETTE = ['#29DBA4', '#2DA888', '#0FD6F4', '#0A0E28', '#b86e00', '#6A67CE', '#3498DB'];
+
+// Normaliza etiqueta de franja para matching tolerante (ignora espacios, guiones, barras)
+function normFranjaKey(s) { return String(s || '').trim().toLowerCase().replace(/[\s\/\-]+/g, ''); }
+
+// Lee el monto del pago desde la columna correcta (C de Pagos)
+function prodVal(r) {
+  return parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']);
+}
+
+// Lee la fecha del pago usando la columna A detectada; cae en 'Fecha de ingreso' si no se detectó
+function prodDate(r) {
+  return parseDate(COL_FECHA_PROD ? r[COL_FECHA_PROD] : r['Fecha de ingreso']);
+}
+
+function renderProducto(viewName) {
+  const prod = PRODUCTOS[viewName];
+  if (!prod) return;
+  const today  = new Date();
+  const todayY = today.getFullYear(), todayM = today.getMonth(), todayD = today.getDate();
+
+  // Filtrar allRows por producto usando .includes() flexible sobre Col E
+  // Maneja variaciones: "Cosecha + (cuotas)", "Agrap Pay", "Agrapp Pay", etc.
+  const prodRows = COL_PRODUCTO
+    ? allRows.filter(r => {
+        const v = String(r[COL_PRODUCTO] || '').toLowerCase();
+        return v.includes(prod.keyword);
+      })
+    : [];
+
+  // Filas del mes actual (usa Col A de Pagos para la fecha)
+  const currRows = prodRows.filter(r => {
+    const d = prodDate(r);
+    return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+  });
+
+  // Último día con datos
+  const fechas = currRows.map(r => prodDate(r)).filter(Boolean);
+  const dCorte = fechas.length
+    ? new Date(Math.max(...fechas.map(d => d.getTime()))).getDate()
+    : Math.max(1, todayD - 1);
+
+  const totalAcum = currRows.reduce((s, r) => s + prodVal(r), 0);
+  const metaTotal = getMetaV2Total(prod.dataKey);
+  const franjas   = getMetaV2Franjas(prod.dataKey);
+
+  // Título dinámico del gráfico
+  const chartTitle = document.getElementById('prod-chart-title');
+  if (chartTitle) chartTitle.textContent = `Recaudo acumulado — ${prod.nombre}`;
+
+  renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte);
+  renderProdSprints(prod, prodRows, todayY, todayM, metaTotal);
+  renderProdChart(prod, prodRows, todayY, todayM, todayD, metaTotal);
+  renderProdDailyChart(prod, currRows, todayY, todayM, dCorte, todayD, metaTotal);
+}
+
+// Semáforo de producto: Verde >=95%, Amarillo >=70%, Rojo <70%
+function semProd(pct) {
+  if (pct == null) return '#999';
+  if (pct >= 95) return '#2DA888';
+  if (pct >= 70) return '#b86e00';
+  return '#c0391b';
+}
+
+function renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte) {
+  const pct      = metaTotal ? totalAcum / metaTotal * 100 : null;
+  const pctColor = semProd(pct);
+  const barHtml  = pct != null ? `
+    <div class="kpi-meta" style="margin-top:10px">
+      <div class="kpi-meta-bar" style="height:5px">
+        <div class="kpi-meta-fill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${pctColor}"></div>
+      </div>
+      <span class="kpi-meta-pct ${pct>=100?'over':''}">${pct.toFixed(1)}%</span>
+    </div>` : '';
+
+  // Normaliza texto quitando tildes y pasando a minúsculas (para igualar "Al día" / "Al Dia" / "al dia")
+  const normTxt = s => String(s || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  // Agrupar recaudo real por franja; la clave es el texto normalizado de Col AB
+  const byFranja = {};
+  currRows.forEach(r => {
+    const key = normTxt(r[COL_MORA_PROD]);
+    if (!key) return;
+    if (!byFranja[key]) byFranja[key] = { val: 0, txn: 0 };
+    byFranja[key].val += prodVal(r);
+    byFranja[key].txn++;
+  });
+
+  // Renderizar solo las franjas propias de este producto
+  // Para Establecimiento (1 franja "General") no mostramos tarjetas — la hero ya resume todo
+  const mostrarFranjas = franjas.length > 0 && prod.dataKey !== 'establecimiento';
+  let bucketsHtml = '';
+  franjas.forEach((f, i) => {
+    const color  = PROD_FRANJA_PALETTE[i % PROD_FRANJA_PALETTE.length];
+    const key    = normTxt(f.label);
+    const val    = (byFranja[key] || {}).val || 0;
+    const txn    = (byFranja[key] || {}).txn || 0;
+    const mv     = f.meta || null;
+    const pctB   = mv ? val / mv * 100 : null;
+    const colB   = semProd(pctB);
+    bucketsHtml += `
+      <div class="prod-franja-card" style="border-left-color:${color}">
+        <div class="prod-franja-label" style="color:${color}">${f.label}</div>
+        <div class="prod-franja-val">${fmtM(val)}</div>
+        <div class="prod-franja-sub">${txn} pago${txn!==1?'s':''} · día ${dCorte}</div>
+        ${mv ? `<div class="prod-franja-meta">Meta: ${fmtM(mv)}</div>` : ''}
+        ${pctB != null ? `
+          <div class="pbar" style="margin-top:6px">
+            <div class="pfill" style="width:${Math.min(pctB,100).toFixed(1)}%;background:${colB}"></div>
+          </div>
+          <div style="font-size:10px;color:${colB};font-weight:600;margin-top:2px">${pctB.toFixed(0)}%</div>
+        ` : ''}
+      </div>`;
+  });
+
+  document.getElementById('prod-kpi-top').innerHTML = `
+    <div class="prod-hero">
+      <div class="prod-hero-label">${prod.nombre} — Recaudo acumulado del mes</div>
+      <div class="prod-hero-val" style="color:${pctColor}">${fmtM(totalAcum)}</div>
+      <div class="prod-hero-sub">de ${metaTotal ? fmtM(metaTotal) : 'meta no disponible'} · corte día ${dCorte} · ${currRows.length} pagos</div>
+      ${barHtml}
+    </div>
+    ${mostrarFranjas ? `<div class="prod-franja-grid">${bucketsHtml}</div>` : ''}`;
+}
+
+function renderProdSprints(prod, prodRows, todayY, todayM, metaTotal) {
+  const today   = new Date();
+  const currSN  = sprintOfMonth(today.getDate());
+  const diasMes = new Date(todayY, todayM + 1, 0).getDate();
+  const diasS3  = diasMes - 20;
+  const metaSprint = n => metaTotal ? metaTotal * (n < 3 ? 10 : diasS3) / diasMes : null;
+
+  const sTotal = sn => prodRows.filter(r => {
+    const d = prodDate(r);
+    return d && d.getFullYear() === todayY && d.getMonth() === todayM && sprintOfMonth(d.getDate()) === sn;
+  }).reduce((s, r) => s + prodVal(r), 0);
+
+  const ranges = ['días 1–10', 'días 11–20', `días 21–${diasMes}`];
+  let html = '<div class="prod-sprints-grid">';
+  [1, 2, 3].forEach(sn => {
+    const val  = sTotal(sn);
+    const meta = metaSprint(sn);
+    const pct  = meta ? val / meta * 100 : null;
+    const col  = pct == null ? '#999' : pct >= 100 ? '#2DA888' : pct >= 60 ? '#b86e00' : '#c0391b';
+    html += `
+      <div class="prod-sprint-card${sn === currSN ? ' prod-sprint-active' : ''}">
+        <div class="prod-sprint-label">Sprint ${sn}
+          <span style="color:#ccc;font-size:10px"> (${ranges[sn-1]})</span>
+          ${sn === currSN ? '<span style="color:#29DBA4;font-size:10px;font-weight:700"> EN CURSO</span>' : ''}
+        </div>
+        <div class="prod-sprint-val">${fmtM(val)}</div>
+        ${meta ? `<div class="prod-sprint-meta">Meta: ${fmtM(meta)}</div>` : ''}
+        ${pct != null ? `
+          <div class="pbar" style="margin-top:8px">
+            <div class="pfill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${col}"></div>
+          </div>
+          <div style="font-size:14px;font-weight:700;color:${col};margin-top:4px">${pct.toFixed(1)}%</div>
+        ` : ''}
+      </div>`;
+  });
+  html += '</div>';
+  document.getElementById('prod-sprints').innerHTML =
+    `<div class="section-title" style="margin-bottom:10px">Resumen por Sprints — ${MESES[todayM]}</div>${html}`;
+}
+
+function renderProdChart(prod, prodRows, todayY, todayM, todayD, metaTotal) {
+  destroyChart('producto');
+  const lastDay = new Date(todayY, todayM + 1, 0).getDate();
+  const byDay   = {};
+  prodRows.forEach(r => {
+    const d = prodDate(r);
+    if (!d || d.getFullYear() !== todayY || d.getMonth() !== todayM) return;
+    byDay[d.getDate()] = (byDay[d.getDate()] || 0) + prodVal(r);
+  });
+
+  const labels = [], cumVals = [], ptColors = [], ptRadii = [];
+  let running = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    labels.push('' + day);
+    if (day <= todayD) {
+      running += byDay[day] || 0;
+      cumVals.push(+(running / 1_000_000).toFixed(6));
+      ptColors.push(day === todayD ? '#29DBA4' : '#2DA888');
+      ptRadii.push(day === todayD ? 5 : 2);
+    } else {
+      cumVals.push(null);
+      ptColors.push('transparent');
+      ptRadii.push(0);
+    }
+  }
+
+  const metaVal   = metaTotal ? +(metaTotal / 1_000_000).toFixed(6) : null;
+  const totalAcum = running * 1_000_000;
+  const pct       = metaVal && metaTotal ? (totalAcum / metaTotal * 100).toFixed(1) : null;
+  const sub       = document.getElementById('prod-chart-sub');
+  if (sub) sub.textContent = pct
+    ? `Acumulado: ${fmtM(totalAcum)} · ${pct}% completado al día ${todayD} · Meta mensual: ${fmtM(metaTotal)}`
+    : `Acumulado: ${fmtM(totalAcum)} al día ${todayD} · Meta mensual: por definir`;
+
+  const maxCum = Math.max(...cumVals.filter(v => v != null), 0);
+  const maxY   = metaVal ? Math.max(metaVal * 1.1, maxCum * 1.1) : maxCum * 1.3 || 1;
+
+  const datasets = [{
+    type: 'line', label: 'Acumulado', data: cumVals,
+    borderColor: '#29DBA4', borderWidth: 2.5,
+    fill: true, backgroundColor: 'rgba(29,158,117,.08)',
+    pointBackgroundColor: ptColors, pointRadius: ptRadii, pointHoverRadius: 5,
+    tension: 0.3, spanGaps: false, datalabels: { display: false },
+  }];
+  if (metaVal) {
+    datasets.push({
+      type: 'line', label: 'Meta mensual', data: labels.map(() => metaVal),
+      borderColor: '#b86e00', borderWidth: 1.5, borderDash: [6, 4],
+      pointRadius: 0, fill: false,
+      datalabels: {
+        display: (_, idx) => idx === lastDay - 1,
+        anchor: 'end', align: 'left',
+        color: '#b86e00', font: { size: 10, weight: '700' },
+        formatter: () => `Meta ${fmtM(metaTotal)}`,
+      }
+    });
+  }
+
+  charts['producto'] = new Chart(document.getElementById('chart-producto'), {
+    type: 'line', data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16, right: metaVal ? 90 : 16 } },
+      plugins: {
+        legend: { display: false }, datalabels: {},
+        tooltip: {
+          mode: 'index', intersect: false,
+          filter: item => item.parsed.y !== null,
+          callbacks: {
+            title: items => `Día ${items[0].label} de ${MESES[todayM]}`,
+            label: c => c.datasetIndex === 1
+              ? ` Meta: ${fmtM(metaTotal)}`
+              : ` Acumulado: ${fmtM(c.parsed.y * 1_000_000)}`,
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#999', font: { size: 10 }, maxTicksLimit: 15 }, grid: { display: false } },
+        y: { ticks: { color: '#bbb', font: { size: 11 }, callback: v => fmtAxis(v) },
+             grid: { color: 'rgba(0,0,0,.04)' }, min: 0, max: +maxY.toFixed(3) }
+      }
+    }
+  });
+}
+
+function renderProdDailyChart(prod, currRows, todayY, todayM, dCorte, todayD, metaTotal) {
+  destroyChart('prod-diario');
+  const byDay = {};
+  currRows.forEach(r => {
+    const d = prodDate(r);
+    if (d) byDay[d.getDate()] = (byDay[d.getDate()] || 0) + prodVal(r);
+  });
+
+  const lastDay = new Date(todayY, todayM + 1, 0).getDate();
+  // Resaltar el día actual (todayD) si tiene datos; si no, el último día con datos (dCorte)
+  const highlighted = byDay[todayD] != null ? todayD : dCorte;
+  const labels = [], vals = [], colors = [];
+  for (let day = 1; day <= dCorte; day++) {
+    labels.push('' + day);
+    const v = byDay[day] || 0;
+    vals.push(+(v / 1_000_000).toFixed(6));
+    colors.push(day === highlighted ? '#29DBA4' : '#C7FEED');
+  }
+
+  const avgRef = metaTotal ? +(metaTotal / lastDay / 1_000_000).toFixed(6) : null;
+  const daysWithData = vals.filter(v => v > 0).length;
+  const avgActual = daysWithData ? vals.reduce((a, b) => a + b, 0) / daysWithData * 1_000_000 : 0;
+
+  const sub = document.getElementById('prod-daily-chart-sub');
+  const totalDia = byDay[highlighted] || 0;
+  const labelDia = highlighted === todayD ? `Hoy (día ${todayD})` : `Último día con datos (día ${dCorte})`;
+  if (sub) sub.textContent = `${labelDia}: ${fmtM(totalDia)} · Promedio real: ${fmtM(avgActual)}${avgRef ? ` · Meta/día: ${fmtM(metaTotal / lastDay)}` : ''}`;
+
+  const datasets = [{
+    type: 'bar', label: 'Recaudo del día', data: vals,
+    backgroundColor: colors, borderRadius: 4, borderSkipped: false,
+    datalabels: { display: false },
+  }];
+  if (avgRef) {
+    datasets.push({
+      type: 'line', label: 'Ritmo meta diario', data: labels.map(() => avgRef),
+      borderColor: '#b86e00', borderWidth: 1.5, borderDash: [5, 4],
+      pointRadius: 0, fill: false,
+      datalabels: {
+        display: (_, idx) => idx === labels.length - 1,
+        anchor: 'end', align: 'left',
+        color: '#b86e00', font: { size: 10, weight: '700' },
+        formatter: () => `Meta/día ${fmtM(metaTotal / lastDay)}`,
+      }
+    });
+  }
+
+  charts['prod-diario'] = new Chart(document.getElementById('chart-producto-diario'), {
+    type: 'bar', data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16, right: avgRef ? 90 : 16 } },
+      plugins: {
+        legend: { display: false }, datalabels: {},
+        tooltip: {
+          callbacks: {
+            title: items => `Día ${items[0].label} de ${MESES[todayM]}`,
+            label: c => c.datasetIndex === 1
+              ? ` Meta/día: ${fmtM(metaTotal / lastDay)}`
+              : ` Recaudo: ${fmtM(c.parsed.y * 1_000_000)}`,
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#999', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#bbb', font: { size: 11 }, callback: v => fmtAxis(v) },
+             grid: { color: 'rgba(0,0,0,.04)' }, min: 0 }
+      }
+    }
+  });
+}
+
 /* ─── NAVEGACIÓN ─────────────────────────────────── */
 const CARTERA_ELS = ['metas-banner', 'kpi-grid', 'bucket-section'];
+// Vistas que NO usan el banner de metas / kpi-grid / bucket-section genéricos (tienen su propio contenido)
+const HIDE_CARTERA_VIEWS = ['transicion', 'mensual', 'asesores', 'metasv2', 'cosecha', 'agrappay', 'establecimiento'];
 
 function switchView(name, btn) {
   currentView = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('view-'+name).classList.add('active');
+  // Las 3 pestañas de producto comparten un único div view-producto
+  const viewId = VIEWS_PRODUCTO.includes(name) ? 'view-producto' : `view-${name}`;
+  document.getElementById(viewId).classList.add('active');
 
-  const isTransicion = name === 'transicion';
-  const isMensual    = name === 'mensual';
+  const isTransicion  = name === 'transicion';
+  const isProducto    = VIEWS_PRODUCTO.includes(name);
+  if (!isTransicion && !isProducto && lastRendered) { renderKPIs(); renderBuckets(); }
+
+  // Se aplica DESPUÉS de renderKPIs()/renderBuckets() a propósito: esas funciones
+  // a veces resetean su propio display internamente, así que esta pasada final
+  // es la que manda y evita que el kpi-grid/bucket-section "se filtren" en vistas
+  // que no los usan (Mensual, Asesores, Metas V2, Transición).
   CARTERA_ELS.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = (isTransicion || isMensual) ? 'none' : '';
+    if (el) el.style.display = HIDE_CARTERA_VIEWS.includes(name) ? 'none' : '';
   });
 
   // Los charts creados mientras su pestaña estaba oculta (display:none) quedan en 0x0px;
   // forzamos un resize ahora que el contenedor ya es visible.
   requestAnimationFrame(() => Object.values(charts).forEach(c => c && c.resize()));
 
-  if (isTransicion) { loadTransicion(); return; } // loadTransicion llama renderTransicion al terminar
-  if (lastRendered) { renderKPIs(); renderBuckets(); }
+  if (isTransicion) loadTransicion(); // loadTransicion llama renderTransicion al terminar
+  if (isProducto && lastRendered) renderProducto(name);
 }
 
 /* ─── TRANSICIÓN: carga desde Sheets ─────────────── */
@@ -2120,6 +2819,7 @@ loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js')
     loadMetas();
     loadTransicion();
     loadGestion();
+    loadMetasV2();
     startAutoRefresh();
   })
   .catch(err => showError('No se pudieron cargar las librerías de gráficos (' + err.message + ').'));
