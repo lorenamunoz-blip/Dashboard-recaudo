@@ -248,7 +248,7 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
     </div>
 
     <!-- DIARIO -->
-    <div class="view active" id="view-diario">
+    <div class="view" id="view-diario">
       <div class="chart-box">
         <div class="chart-header">
           <div class="chart-title">Recaudo — últimos 10 días</div>
@@ -283,7 +283,7 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
     </div>
 
     <!-- MENSUAL -->
-    <div class="view" id="view-mensual">
+    <div class="view active" id="view-mensual">
 
       <!-- Banner resumen ejecutivo del mes -->
       <div id="mensual-summary-banner" style="
@@ -438,7 +438,7 @@ let metasData  = {};
 let metasFranjaData = {}; // key: `${año}::${bucketKey}` -> { mensual, diaria, semanal }
 let metaAsesorMensual = null; // fila "Meta Asesor Mensual" del Sheet "Metas" (valor único, sin año/mes)
 let metaAsesorSemanal = null; // fila "Meta Asesor Semanal" del Sheet "Metas" (valor único, sin año/mes)
-let currentView = 'diario';
+let currentView = 'mensual';
 let lastRendered = null; // snapshot for switchView re-render
 
 // Columnas de Pagos para filtrado por producto (se detectan en onSheetData)
@@ -752,6 +752,11 @@ function render() {
   renderMensual();
   renderAsesores();
   updateMetasBanner();
+  // Ocultar elementos globales que no aplican a la vista inicial
+  CARTERA_ELS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = HIDE_CARTERA_VIEWS.includes(currentView) ? 'none' : '';
+  });
 }
 
 /* ─── KPI CARD ───────────────────────────────────── */
