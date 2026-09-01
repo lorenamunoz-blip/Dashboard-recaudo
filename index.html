@@ -285,27 +285,30 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
     <!-- MENSUAL -->
     <div class="view active" id="view-mensual">
 
-      <!-- Banner resumen ejecutivo del mes -->
-      <div id="mensual-summary-banner" style="
+      <!-- SECCIÓN 1: Recaudo Histórico -->
+      <div class="section-title">Recaudo histórico</div>
+      <div class="mes-grid" id="mes-cards" style="margin-bottom:20px"></div>
+
+      <!-- SECCIÓN 2: Cierre Mes Anterior -->
+      <div id="banner-cierre-anterior" style="
+        display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+        background:rgba(10,14,40,.04);border:1.5px solid #0A0E28;border-radius:10px;
+        padding:10px 16px;margin-bottom:10px;font-size:13px;color:#0A0E28;line-height:1.4">
+      </div>
+      <!-- Tarjetas de recaudo por producto del mes cerrado -->
+      <div id="cierre-producto-cards" style="margin-bottom:20px"></div>
+
+      <!-- SECCIÓN 3: Mes Vigente -->
+      <div id="banner-metas-vigente" style="
         display:flex;align-items:center;gap:6px;flex-wrap:wrap;
         background:#f0fdfb;border:1px dashed #29DBA4;border-radius:10px;
-        padding:10px 16px;margin-bottom:18px;font-size:13px;color:#555;line-height:1.4">
+        padding:10px 16px;margin-bottom:14px;font-size:13px;color:#555;line-height:1.4">
       </div>
-
-      <!-- 1. Recaudo histórico por mes -->
-      <div class="section-title">Recaudo histórico</div>
-      <div class="mes-grid" id="mes-cards"></div>
-
-      <!-- 2. KPIs del mes actual (2 tarjetas) -->
       <div class="kpi-grid" id="mes-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:18px"></div>
-
-      <!-- 3. Sprints del mes vigente -->
       <div id="mes-sprints-section">
         <div class="section-title">Recaudo General por Sprints — Mes Vigente</div>
         <div id="mes-sprints-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px"></div>
       </div>
-
-      <!-- 4. Recaudo diario — últimos 10 días -->
       <div class="chart-box">
         <div class="chart-header">
           <div class="chart-title">Recaudo General Diario — Últimos 10 Días</div>
@@ -342,6 +345,7 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
 
     <!-- PRODUCTO (compartido: Cosecha+, AgrapPay, Establecimiento) -->
     <div class="view" id="view-producto">
+      <div id="cierre-mes-anterior-prod"></div>
       <div id="prod-kpi-top"></div>
       <div id="prod-sprints"></div>
       <div class="chart-box" style="margin-bottom:16px">
@@ -366,18 +370,13 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
 
     <!-- ASESORES -->
     <div class="view" id="view-asesores">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#f0fdfb;border:1px dashed #29DBA4;border-radius:10px;padding:10px 16px;margin-bottom:18px;font-size:13px;color:#555;line-height:1.4">
-        <span style="font-size:16px">🎯</span>
-        Meta Ideal <strong>$80.9M</strong>
-        <span style="color:#29DBA4;margin:0 4px">·</span>
-        Meta Mínima <strong>$70.3M</strong>
-        <span style="color:#29DBA4;margin:0 4px">·</span>
-        Línea de Comisión <strong>$56.6M</strong> <span style="color:#aaa">(70% Meta Ideal)</span>
-      </div>
+      <div id="cierre-mes-anterior-asesores"></div>
+      <div id="cierre-asesor-detalle"></div>
+      <div id="banner-asesores-vigente"></div>
       <div class="chart-box">
         <div class="chart-header">
           <div class="chart-title">Recaudo por Asesor — Composición por Producto</div>
-          <div class="chart-sub">Mes vigente · Meta Ideal Equipo: $80.9M · Meta Mínima Equipo: $70.3M · Línea de comisión: 70% Meta Ideal ($56.6M)</div>
+          <div class="chart-sub" id="asesores-chart-sub">Mes vigente</div>
         </div>
         <div class="chart-wrap" style="height:300px">
           <canvas id="chart-asesores"></canvas>
@@ -696,19 +695,32 @@ const METAS_AGOSTO_2026 = {
   provisional: false,
 };
 
+// Devuelve true solo si el mes indicado tiene metas reales configuradas
+function metasDefinidas(year, month) {
+  if (metasData[`${year}-${month}`]?.mensual) return true;
+  if (year === 2026 && month === 7) return true; // Agosto 2026 hardcoded
+  return false;
+}
+
 function getMeta(year, month) {
   const fromSheet = metasData[`${year}-${month}`];
   if (fromSheet?.mensual) return { ...fromSheet, provisional: false };
   // Agosto 2026: metas confirmadas
   if (year === 2026 && month === 7) return METAS_AGOSTO_2026;
-  // Fallback para otros meses sin configurar
-  return {
-    mensual:  CONFIG.META_PROVISIONAL,
-    diaria:   +(CONFIG.META_PROVISIONAL / 30).toFixed(0),
-    semanal:  +(CONFIG.META_PROVISIONAL / 4.33).toFixed(0),
-    minima:   null,
-    provisional: true,
-  };
+  // Meses sin metas configuradas → devuelve ceros para evitar valores ficticios
+  return { mensual: 0, minima: 0, diaria: 0, semanal: 0, provisional: true };
+}
+
+// Wrappers que suprimen las metas V2 cuando el mes vigente no tiene metas definidas
+function getMetaV2TotalVigente(dataKey) {
+  const hoy = new Date();
+  if (!metasDefinidas(hoy.getFullYear(), hoy.getMonth())) return 0;
+  return getMetaV2Total(dataKey);
+}
+function getMetaV2FranjasVigente(dataKey) {
+  const hoy = new Date();
+  if (!metasDefinidas(hoy.getFullYear(), hoy.getMonth())) return [];
+  return getMetaV2Franjas(dataKey);
 }
 
 function updateMetasBanner() {
@@ -966,13 +978,13 @@ function renderKPIs() {
                '#111');
 
   } else if (currentView === 'mensual') {
-    // % se calcula sobre la Meta Mínima (base real de cumplimiento)
-    const pctBase   = meta?.minima   ? totalMes / meta.minima   * 100 : null;
-    const pctAspir  = meta?.mensual  ? totalMes / meta.mensual  * 100 : null;
-    const colBase   = pctBase == null ? '#999' : pctBase >= 95 ? '#2DA888' : pctBase >= 70 ? '#b86e00' : '#c0391b';
-    const metaLines = meta?.minima
-      ? `Meta Mínima: ${fmtM(meta.minima)} · Meta Aspiracional: ${fmtM(meta.mensual)}`
-      : (meta?.mensual ? `Meta: ${fmtM(meta.mensual)}` : 'Meta mensual: Por definir');
+    // Si meta no está configurada, usar $0 (evita NaN/división por cero)
+    const metaMinima = meta?.minima   || 0;
+    const metaIdeal  = meta?.mensual  || 0;
+    const pctBase    = metaMinima > 0 ? totalMes / metaMinima * 100
+                     : metaIdeal  > 0 ? totalMes / metaIdeal  * 100 : 0;
+    const colBase    = pctBase >= 95 ? '#2DA888' : pctBase >= 70 ? '#b86e00' : '#c0391b';
+    const metaLines  = `Meta Mínima: ${fmtM(metaMinima)} · Meta Aspiracional: ${fmtM(metaIdeal)}`;
     const mesGrid = document.getElementById('mes-kpi-grid');
     if (mesGrid) {
       mesGrid.style.gridTemplateColumns = '1fr';
@@ -982,13 +994,12 @@ function renderKPIs() {
         metaLines,
         '#0A0E28', pctBase, null,
         'border:2px solid #0A0E28;background:rgba(10,14,40,.03);box-shadow:0 4px 16px rgba(10,14,40,.10);');
-      // Oscurecer label y sub para máximo contraste sobre fondo tenue navy
       const _lbl = mesGrid.querySelector('.kpi-label');
       const _sub = mesGrid.querySelector('.kpi-sub');
       const _pct = mesGrid.querySelector('.kpi-meta-pct');
       if (_lbl) { _lbl.style.color = '#374151'; _lbl.style.fontWeight = '600'; }
       if (_sub) _sub.style.color = '#374151';
-      if (_pct) _pct.style.color = colBase; // % cumplimiento mantiene color semáforo
+      if (_pct) _pct.style.color = colBase;
     }
 
   } else if (currentView === 'asesores') {
@@ -1024,7 +1035,7 @@ function renderBuckets() {
             String(r[COL_PRODUCTO] || '').toLowerCase().includes(prod.keyword)
           ).reduce((s, r) => s + prodVal(r), 0)
         : 0;
-      const meta  = getMetaV2Total(prod.dataKey);
+      const meta  = getMetaV2TotalVigente(prod.dataKey);
       const pct   = meta ? recaudo / meta * 100 : null;
       const col   = semProd(pct);
       return `
@@ -1460,26 +1471,83 @@ function renderSemanal() {
 
 /* ─── MENSUAL: todas las meses apilados ──────────── */
 function renderMensualBanner() {
-  const banner = document.getElementById('mensual-summary-banner');
-  if (!banner) return;
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
-  const meta   = getMeta(todayY, todayM);
-  const totalMes = allRows
-    .filter(r => { const d = parseDate(r['Fecha de ingreso']); return d && d.getFullYear()===todayY && d.getMonth()===todayM; })
-    .reduce((s, r) => s + parseNum(r['VALOR']), 0);
-  const pct    = meta?.minima ? totalMes / meta.minima * 100 : (meta?.mensual ? totalMes / meta.mensual * 100 : null);
-  const colPct = pct == null ? '#b45309' : pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
-  const pctHtml = pct != null
-    ? `<strong style="color:${colPct}">${pct.toFixed(1)}% cumplido</strong>`
-    : '<span style="color:#999">% sin meta</span>';
-  const items = [
-    meta?.mensual ? `Meta Ideal <strong>${fmtM(meta.mensual)}</strong>` : null,
-    meta?.minima  ? `Meta Mínima <strong>${fmtM(meta.minima)}</strong>` : null,
-    `Recaudado <strong>${fmtM(totalMes)}</strong>`,
-    pctHtml,
-  ].filter(Boolean).join(' <span style="color:#29DBA4;margin:0 4px">·</span> ');
-  banner.innerHTML = `<span style="font-size:16px">🎯</span> ${items}`;
+  const { prevY, prevM, nombre: nombrePrev } = getMesAnteriorInfo();
+
+  // ── Banner 1: Cierre mes anterior ────────────────────────────────
+  const bannerCierre = document.getElementById('banner-cierre-anterior');
+  if (bannerCierre) {
+    const mesAnteriorLabel = (nombrePrev.charAt(0).toUpperCase() + nombrePrev.slice(1)).toUpperCase();
+    const metaPrev = getMeta(prevY, prevM);
+    const totalPrev = allRows
+      .filter(r => { const d = parseDate(r['Fecha de ingreso']); return d && d.getFullYear()===prevY && d.getMonth()===prevM; })
+      .reduce((s, r) => s + parseNum(r['VALOR']), 0);
+    const pctPrev = metaPrev?.minima ? totalPrev / metaPrev.minima * 100
+                  : metaPrev?.mensual ? totalPrev / metaPrev.mensual * 100 : null;
+    const colPrev = pctPrev == null ? '#0A0E28' : pctPrev >= 95 ? '#2DA888' : pctPrev >= 70 ? '#b45309' : '#c0391b';
+    const pctHtmlPrev = pctPrev != null
+      ? `<strong style="color:${colPrev}">${pctPrev.toFixed(1)}% cumplido</strong>`
+      : '<span style="color:#999">Sin meta configurada</span>';
+    const itemsPrev = [
+      metaPrev?.mensual ? `Meta Ideal <strong>${fmtM(metaPrev.mensual)}</strong>` : null,
+      metaPrev?.minima  ? `Meta Mínima <strong>${fmtM(metaPrev.minima)}</strong>`  : null,
+      `Recaudado <strong>${fmtM(totalPrev)}</strong>`,
+      pctHtmlPrev,
+    ].filter(Boolean).join(' <span style="color:#8492a6;margin:0 3px">·</span> ');
+    bannerCierre.innerHTML = `<span style="font-size:15px">✅</span> <strong style="color:#0A0E28;margin-right:4px">CIERRE ${mesAnteriorLabel}:</strong> ${itemsPrev}`;
+  }
+
+  // ── Tarjetas de producto del mes anterior ─────────────────────────
+  const cardsProd = document.getElementById('cierre-producto-cards');
+  if (cardsProd) {
+    const PRODS_MEN = [
+      { nombre: 'Cosecha +',      kw: 'cosecha',  color: '#29DBA4' },
+      { nombre: 'AgrapPay',       kw: 'agrap',    color: '#0A0E28' },
+      { nombre: 'Establecimiento',kw: 'establec', color: '#0FD6F4' },
+    ];
+    const prevRowsMen = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === prevY && d.getMonth() === prevM;
+    });
+    const totalGenPrev = prevRowsMen.reduce((s, r) => s + parseNum(r['VALOR']), 0);
+    const html = PRODS_MEN.map(p => {
+      const val = prevRowsMen
+        .filter(r => String(r[COL_PRODUCTO]||'').toLowerCase().includes(p.kw))
+        .reduce((s, r) => s + parseNum(r['VALOR']), 0);
+      const pct = totalGenPrev > 0 ? val / totalGenPrev * 100 : 0;
+      return `<div style="background:#fff;border:1px solid #e8edf2;border-top:3px solid ${p.color};
+          border-radius:10px;padding:14px 16px;flex:1;min-width:140px">
+        <div style="font-size:10px;font-weight:700;color:#8492a6;text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:6px">${p.nombre}</div>
+        <div style="font-size:20px;font-weight:800;color:#0A0E28">${fmtM(val)}</div>
+      </div>`;
+    }).join('');
+    cardsProd.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap">${html}</div>`;
+  }
+
+  // ── Banner 2: Metas mes vigente ───────────────────────────────────
+  const bannerVigente = document.getElementById('banner-metas-vigente');
+  if (bannerVigente) {
+    const mesVigenteLabel = (MESES[todayM].charAt(0).toUpperCase() + MESES[todayM].slice(1)).toUpperCase();
+    const meta = getMeta(todayY, todayM);
+    const totalMes = allRows
+      .filter(r => { const d = parseDate(r['Fecha de ingreso']); return d && d.getFullYear()===todayY && d.getMonth()===todayM; })
+      .reduce((s, r) => s + parseNum(r['VALOR']), 0);
+    // Si meta no está configurada, tratar como $0 (sin división por cero)
+    const metaIdeal  = meta?.mensual || 0;
+    const metaMinima = meta?.minima  || 0;
+    const pct = metaMinima > 0 ? totalMes / metaMinima * 100
+              : metaIdeal  > 0 ? totalMes / metaIdeal  * 100 : 0;
+    const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
+    const items = [
+      `Meta Ideal <strong>${fmtM(metaIdeal)}</strong>`,
+      `Meta Mínima <strong>${fmtM(metaMinima)}</strong>`,
+      `Recaudado <strong>${fmtM(totalMes)}</strong>`,
+      `<strong style="color:${colPct}">${pct.toFixed(1)}% cumplido</strong>`,
+    ].join(' <span style="color:#29DBA4;margin:0 3px">·</span> ');
+    bannerVigente.innerHTML = `<span style="font-size:15px">🎯</span> <strong style="color:#2DA888;margin-right:4px">METAS ${mesVigenteLabel}:</strong> ${items}`;
+  }
 }
 
 function renderMensualSprints() {
@@ -1684,6 +1752,7 @@ function asesorMetaRow(pct, metaVal, label) {
 
 function renderAsesores() {
   destroyChart('asesores');
+  renderCierreAsesores();
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
 
@@ -1722,10 +1791,11 @@ function renderAsesores() {
     return;
   }
 
-  // Líneas de referencia en M de pesos
+  // Líneas de referencia — solo cuando las metas del mes vigente están definidas
+  const hayMetas = metasDefinidas(todayY, todayM);
   const lineComision = +(METAS_ASESORES.umbralComision / 1_000_000).toFixed(3);
   const lineIdeal    = +(METAS_ASESORES.ideal           / 1_000_000).toFixed(3);
-  const maxV = Math.max(...asesores.map(a => a.total/1_000_000), lineIdeal) * 1.15;
+  const maxV = Math.max(...asesores.map(a => a.total/1_000_000), hayMetas ? lineIdeal : 0) * 1.15;
 
   // Plugin de líneas horizontales punteadas
   const refLinesPlugin = {
@@ -1751,8 +1821,10 @@ function renderAsesores() {
         ctx.fillText(label, chartArea.right - 4, y - 3);
         ctx.restore();
       };
-      drawLine(lineIdeal,    '#0A0E28', '100% Meta Ideal');
-      drawLine(lineComision, '#ef4444', '📍 Línea de Comisión — 70%');
+      if (hayMetas) {
+        drawLine(lineIdeal,    '#0A0E28', '100% Meta Ideal');
+        drawLine(lineComision, '#ef4444', '📍 Línea de Comisión — 70%');
+      }
     }
   };
 
@@ -1760,8 +1832,10 @@ function renderAsesores() {
     PROD_KEYS.map(p =>
       `<span class="li"><span class="lsq" style="background:${p.color}"></span>${p.label}</span>`
     ).join('') +
-    `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión (70%)</span>` +
-    `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Ideal (100%)</span>`;
+    (hayMetas
+      ? `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión (70%)</span>` +
+        `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Ideal (100%)</span>`
+      : '');
 
   charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
     type: 'bar',
@@ -1809,7 +1883,8 @@ function renderAsesores() {
             label: c => ` ${c.dataset.label}: ${fmtM(c.parsed.y * 1_000_000)}`,
             footer: items => {
               const total = items.reduce((s,i) => s + i.parsed.y, 0);
-              const pct   = (total / (METAS_ASESORES.ideal/1_000_000) * 100).toFixed(1);
+              if (!hayMetas) return [`Total: ${fmtM(total*1_000_000)}`];
+              const pct = (total / (METAS_ASESORES.ideal/1_000_000) * 100).toFixed(1);
               return [`Total: ${fmtM(total*1_000_000)} · ${pct}% Meta Ideal`];
             }
           }
@@ -1841,15 +1916,14 @@ function renderAsesores() {
             <th style="text-align:right">Cosecha +</th>
             <th style="text-align:right">AgrapPay</th>
             <th style="text-align:right">Establecimiento</th>
-            <th style="text-align:right">% Cumpl.</th>
-            <th style="text-align:center">Comisión</th>
+            ${hayMetas ? '<th style="text-align:right">% Cumpl.</th><th style="text-align:center">Comisión</th>' : ''}
           </tr>
         </thead>
         <tbody>
           ${asesores.map((a, i) => {
-            const pct    = a.total / ideal * 100;
-            const comisiona = a.total >= umbral;
-            const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
+            const pct    = hayMetas ? a.total / ideal * 100 : null;
+            const comisiona = hayMetas ? a.total >= umbral : null;
+            const colPct = pct == null ? '#999' : pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
             return `<tr style="${i%2===0?'background:#fafafa':''}">
               <td style="color:#aaa;font-size:11px">${i+1}</td>
               <td style="font-weight:600;color:#111">${a.name}</td>
@@ -1857,10 +1931,8 @@ function renderAsesores() {
               <td style="text-align:right;color:#29DBA4">${a.cosecha>0?fmtM(a.cosecha):'—'}</td>
               <td style="text-align:right;color:#0A0E28">${a.agrappay>0?fmtM(a.agrappay):'—'}</td>
               <td style="text-align:right;color:#0FD6F4">${a.establecimiento>0?fmtM(a.establecimiento):'—'}</td>
-              <td style="text-align:right;font-weight:700;color:${colPct}">${pct.toFixed(1)}%</td>
-              <td style="text-align:center;font-size:13px">${comisiona
-                ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>'
-                : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>
+              ${hayMetas ? `<td style="text-align:right;font-weight:700;color:${colPct}">${pct.toFixed(1)}%</td>` : ''}
+              ${hayMetas ? `<td style="text-align:center;font-size:13px">${comisiona ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>' : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>` : ''}
             </tr>`;
           }).join('')}
         </tbody>
@@ -2419,6 +2491,318 @@ function prodDate(r) {
   return parseDate(COL_FECHA_PROD ? r[COL_FECHA_PROD] : r['Fecha de ingreso']);
 }
 
+// ─── CIERRE MES ANTERIOR ─────────────────────────────────────────────────────
+
+function getMesAnteriorInfo() {
+  const today  = new Date();
+  const curY   = today.getFullYear(), curM = today.getMonth();
+  const prevM  = curM === 0 ? 11 : curM - 1;
+  const prevY  = curM === 0 ? curY - 1 : curY;
+  return { prevY, prevM, nombre: MESES[prevM] };
+}
+
+function renderCierreProd(prod, prodRows) {
+  const el = document.getElementById('cierre-mes-anterior-prod');
+  if (!el) return;
+
+  const { prevY, prevM, nombre } = getMesAnteriorInfo();
+  // Normalizador único: minúsculas + sin tildes + sin espacios/guiones/barras
+  const normClave = s => String(s || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\s\/\-]+/g, '');
+
+  const prevRows = prodRows.filter(r => {
+    const d = prodDate(r);
+    return d && d.getFullYear() === prevY && d.getMonth() === prevM;
+  });
+
+  const total = prevRows.reduce((s, r) => s + prodVal(r), 0);
+  if (total === 0) { el.innerHTML = ''; return; }
+
+  // Agrupar por franja de mora (Col AB), clave normalizada consistente
+  const byFranja = {};
+  prevRows.forEach(r => {
+    const key = normClave(r[COL_MORA_PROD]);
+    if (!key) return;
+    if (!byFranja[key]) byFranja[key] = { val: 0, rawLabel: String(r[COL_MORA_PROD]||'').trim() };
+    byFranja[key].val += prodVal(r);
+  });
+
+  // Metas de Metas_V2 indexadas con el mismo normalizador
+  const franjasMeta = getMetaV2Franjas(prod.dataKey);
+  const metaByKey = {};
+  franjasMeta.forEach(f => { metaByKey[normClave(f.label)] = f.meta; });
+
+  const mesLabel = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  let cardsHtml = '';
+
+  if (prod.dataKey === 'agrappay') {
+    // ── AgrapPay: 2 tarjetas agrupadas (Vigente / Vencido-Castigado) ──
+    let recVigente = 0, recVencido = 0;
+    Object.entries(byFranja).forEach(([key, d]) => {
+      if (key === 'aldia') recVigente += d.val;
+      else                 recVencido += d.val;
+    });
+    // Metas fijas por mes para AgrapPay (cuando Metas_V2 no las tiene configuradas)
+    const AGRAPPAY_METAS_CIERRE = {
+      '2026-7': { vigente: 14_463_189, vencido: 10_689_864 }, // Agosto 2026 (mes 7 = índice 0-based)
+    };
+    const overrideMes = AGRAPPAY_METAS_CIERRE[`${prevY}-${prevM}`];
+    const metaVigente = overrideMes ? overrideMes.vigente : (metaByKey['aldia'] || 0);
+    const metaVencido = overrideMes ? overrideMes.vencido : Object.entries(metaByKey)
+      .filter(([k]) => k !== 'aldia')
+      .reduce((s, [, v]) => s + (v || 0), 0);
+    const pctVigente = metaVigente > 0 ? recVigente / metaVigente * 100 : 0;
+    const pctVencido = metaVencido > 0 ? recVencido / metaVencido * 100 : 0;
+
+    const makeCard = (titulo, recaudado, metaVal, pct, accentColor) => {
+      const col = semProd(pct > 0 ? pct : null);
+      return `<div style="background:#fff;border:1px solid #e8edf2;
+          border-top:3px solid ${accentColor};border-radius:10px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:#8492a6;text-transform:uppercase;
+            letter-spacing:.07em;margin-bottom:8px">${titulo}</div>
+        <div style="font-size:22px;font-weight:800;color:#0A0E28;margin-bottom:4px">${fmtM(recaudado)}</div>
+        <div style="font-size:12px;color:#777;margin-bottom:5px">Meta: ${fmtM(metaVal)}</div>
+        <div style="font-size:12px;font-weight:700;color:${col}">${pct.toFixed(1)}% cumplido</div>
+      </div>`;
+    };
+    cardsHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${makeCard('Vigente', recVigente, metaVigente, pctVigente, '#29DBA4')}
+      ${makeCard('Vencido / Castigado', recVencido, metaVencido, pctVencido, '#c0391b')}
+    </div>`;
+
+  } else if (prod.dataKey === 'establecimiento') {
+    // ── Establecimiento: sin desglose — meta fija por mes ──
+    // (cardsHtml vacío; el % se inyecta en el encabezado abajo vía estabMeta)
+
+  } else {
+    // ── Cosecha+: tarjetas individuales por franja ──
+    // Predicados de orden explícito — cubren formatos "Mora 1-30" y "Mora > 30"
+    const FRANJA_PREDICADOS = [
+      k => k.includes('aldia'),                                          // Al día
+      k => k.includes('130') && !k.includes('31'),                      // Mora 1-30
+      k => k.includes('>30') || (k.includes('31') && k.includes('60')), // Mora > 30 / 31-60
+      k => k.includes('>60') || (k.includes('61') && k.includes('90')), // Mora > 60 / 61-90
+      k => k.includes('>90') || k.includes('+90') || k.includes('90'),  // Mora > 90
+    ];
+    const franjaIdx = k => { const i = FRANJA_PREDICADOS.findIndex(fn => fn(k)); return i === -1 ? 99 : i; };
+    const sortedFranjas = Object.entries(byFranja).sort(([a], [b]) => franjaIdx(a) - franjaIdx(b));
+    const FRANJA_COLORS = ['#29DBA4','#2DA888','#0FD6F4','#b86e00','#c0391b','#6A67CE'];
+    if (sortedFranjas.length > 1) {
+      cardsHtml = `<div style="display:flex;gap:8px;flex-wrap:wrap">` +
+        sortedFranjas.map(([key, d], i) => {
+          const color = FRANJA_COLORS[i % FRANJA_COLORS.length];
+          let meta = metaByKey[key];
+          if (meta == null) {
+            const match = Object.keys(metaByKey).find(mk => key.includes(mk) || mk.includes(key));
+            if (match) meta = metaByKey[match];
+          }
+          const pct = (meta && meta > 0) ? (d.val / meta * 100) : 0;
+          const pctColor = semProd(pct > 0 ? pct : null);
+          const label = d.rawLabel || (key.charAt(0).toUpperCase() + key.slice(1));
+          return `<div style="background:#fff;border:1px solid #e8edf2;border-left:3px solid ${color};
+              border-radius:8px;padding:10px 14px;min-width:130px;flex:1">
+            <div style="font-size:11px;color:#8492a6;font-weight:600;margin-bottom:5px;
+                text-transform:uppercase;letter-spacing:.04em">${label}</div>
+            <div style="font-size:16px;font-weight:800;color:#0A0E28;margin-bottom:4px">${fmtM(d.val)}</div>
+            <div style="font-size:11px;color:#777;margin-bottom:3px">Meta: ${meta != null ? fmtM(meta) : 'N/D'}</div>
+            <div style="font-size:11px;font-weight:700;color:${pctColor}">${pct.toFixed(1)}% cumplido</div>
+          </div>`;
+        }).join('') + `</div>`;
+    }
+  }
+
+  // Meta y % para Establecimiento (se muestra en el header en lugar de sub-cards)
+  const ESTAB_METAS_CIERRE = { '2026-7': 30_000_000 };
+  const estabMeta = prod.dataKey === 'establecimiento' ? (ESTAB_METAS_CIERRE[`${prevY}-${prevM}`] || 0) : null;
+  const estabPct  = estabMeta != null && estabMeta > 0 ? total / estabMeta * 100 : 0;
+  const estabCol  = semProd(estabMeta != null && estabPct > 0 ? estabPct : null);
+  const headerDerecho = estabMeta != null
+    ? `<div style="text-align:right">
+        <div style="font-size:20px;font-weight:800;color:#0A0E28">${fmtM(total)}</div>
+        <div style="font-size:11px;color:#777;margin-top:2px">Meta: ${fmtM(estabMeta)}</div>
+        <div style="font-size:12px;font-weight:700;color:${estabCol};margin-top:1px">${estabPct.toFixed(1)}% cumplido</div>
+      </div>`
+    : `<div style="font-size:20px;font-weight:800;color:#0A0E28">${fmtM(total)}</div>`;
+
+  el.innerHTML = `
+    <div style="background:rgba(10,14,40,.03);border:2px solid #0A0E28;border-radius:12px;padding:16px 20px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:${cardsHtml ? '14px' : '0'}">
+        <div style="font-size:13px;font-weight:700;color:#0A0E28;letter-spacing:.04em;text-transform:uppercase">
+          🗓 Cierre ${mesLabel} — ${prod.nombre}
+        </div>
+        ${headerDerecho}
+      </div>
+      ${cardsHtml}
+    </div>`;
+}
+
+function renderCierreAsesores() {
+  const elCierre  = document.getElementById('cierre-mes-anterior-asesores');
+  const elVigente = document.getElementById('banner-asesores-vigente');
+  const today     = new Date();
+  const todayY    = today.getFullYear(), todayM = today.getMonth();
+  const { prevY, prevM, nombre: nombrePrev } = getMesAnteriorInfo();
+  const DOT = `<span style="color:#8492a6;margin:0 4px">·</span>`;
+
+  // ── Metas hardcoded de asesores (Agosto 2026) ────────────────────
+  const METAS_ASE_CIERRE = {
+    '2026-7': { ideal: 80_896_252, minima: 70_344_567, comision: 56_627_376 },
+  };
+  const metasCierre = METAS_ASE_CIERRE[`${prevY}-${prevM}`] || null;
+
+  // ── Banner 1: Cierre mes anterior ────────────────────────────────
+  if (elCierre) {
+    const mesLabel = (nombrePrev.charAt(0).toUpperCase() + nombrePrev.slice(1)).toUpperCase();
+    const prevRows = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === prevY && d.getMonth() === prevM;
+    });
+    const totalPrev = prevRows.reduce((s, r) => s + parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']), 0);
+
+    const metaIdeal   = metasCierre?.ideal    || 0;
+    const metaMinima  = metasCierre?.minima   || 0;
+    const metaComis   = metasCierre?.comision || 0;
+    const pct = metaIdeal > 0 ? totalPrev / metaIdeal * 100 : 0;
+    const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
+
+    const items = [
+      `Meta Ideal <strong>${fmtM(metaIdeal)}</strong>`,
+      `Meta Mínima <strong>${fmtM(metaMinima)}</strong>`,
+      `Línea de Comisión <strong>${fmtM(metaComis)}</strong>`,
+      `Recaudado <strong>${fmtM(totalPrev)}</strong>`,
+    ].join(DOT);
+
+    elCierre.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+        background:rgba(10,14,40,.04);border:1.5px solid #0A0E28;border-radius:10px;
+        padding:10px 16px;margin-bottom:10px;font-size:13px;color:#0A0E28;line-height:1.6">
+      <span style="font-size:15px">✅</span>
+      <strong style="margin-right:4px">CIERRE ${mesLabel} — ASESORES:</strong> ${items}
+    </div>`;
+  }
+
+  // ── Tabla de detalle: cierre mes anterior por asesor ─────────────
+  const elDetalle = document.getElementById('cierre-asesor-detalle');
+  if (elDetalle) {
+    const PROD_KEYS_D = [
+      { key:'cosecha',         label:'Cosecha +',      color:'#29DBA4', kw:'cosecha'  },
+      { key:'agrappay',        label:'AgrapPay',        color:'#0A0E28', kw:'agrap'    },
+      { key:'establecimiento', label:'Establecimiento', color:'#0FD6F4', kw:'establec' },
+    ];
+    const prevRowsD = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === prevY && d.getMonth() === prevM;
+    });
+
+    const byAsesor = {};
+    prevRowsD.forEach(r => {
+      const a = String(r[COL_ASESOR]||'').trim();
+      if (!a || a === '#N/D') return;
+      if (!byAsesor[a]) byAsesor[a] = { total:0, cosecha:0, agrappay:0, establecimiento:0, otros:0 };
+      const val  = parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']);
+      const prod = String(r[COL_PRODUCTO]||'').toLowerCase();
+      byAsesor[a].total += val;
+      let clasificado = false;
+      PROD_KEYS_D.forEach(p => { if (prod.includes(p.kw)) { byAsesor[a][p.key] += val; clasificado = true; } });
+      if (!clasificado) byAsesor[a].otros += val;
+    });
+
+    const asesoresDet = Object.entries(byAsesor)
+      .map(([name, d]) => ({ name, ...d }))
+      .filter(a => a.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    const metaIdealDet  = metasCierre?.ideal    || 0;
+    const umbralComDet  = metasCierre?.comision || 0;
+    const mesLabelDet   = (nombrePrev.charAt(0).toUpperCase() + nombrePrev.slice(1));
+
+    if (asesoresDet.length) {
+      const rowsDet = asesoresDet.map((a, i) => {
+        const pct       = metaIdealDet > 0 ? a.total / metaIdealDet * 100 : 0;
+        const comisiona = umbralComDet > 0 ? a.total >= umbralComDet : false;
+        const colPct    = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
+        return `<tr style="${i%2===0?'background:#fafafa':''}">
+          <td style="color:#aaa;font-size:11px">${i+1}</td>
+          <td style="font-weight:600;color:#111">${a.name}</td>
+          <td style="text-align:right;color:#29DBA4">${a.cosecha>0?fmtM(a.cosecha):'—'}</td>
+          <td style="text-align:right;color:#0A0E28">${a.agrappay>0?fmtM(a.agrappay):'—'}</td>
+          <td style="text-align:right;color:#0FD6F4">${a.establecimiento>0?fmtM(a.establecimiento):'—'}</td>
+          <td style="text-align:right;color:#8492a6">${a.otros>0?fmtM(a.otros):'—'}</td>
+          <td style="text-align:right;font-weight:700">${fmtM(a.total)}</td>
+          <td style="text-align:right;font-weight:700;color:${colPct}">${pct.toFixed(1)}%</td>
+          <td style="text-align:center;font-size:13px">${comisiona
+            ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>'
+            : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>
+        </tr>`;
+      }).join('');
+
+      elDetalle.innerHTML = `
+        <div style="margin-bottom:14px">
+          <div class="section-title" style="margin-bottom:8px">Detalle Cierre ${mesLabelDet} — Por Asesor</div>
+          <div style="overflow-x:auto">
+            <table class="gestion-table" style="width:100%">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Asesor</th>
+                  <th style="text-align:right;color:#29DBA4">Cosecha +</th>
+                  <th style="text-align:right;color:#0A0E28">AgrapPay</th>
+                  <th style="text-align:right;color:#0FD6F4">Establecimiento</th>
+                  <th style="text-align:right;color:#8492a6">Otros</th>
+                  <th style="text-align:right">Recaudo Total</th>
+                  <th style="text-align:right">% Cumpl.</th>
+                  <th style="text-align:center">Comisión</th>
+                </tr>
+              </thead>
+              <tbody>${rowsDet}</tbody>
+            </table>
+          </div>
+        </div>`;
+    } else {
+      elDetalle.innerHTML = '';
+    }
+  }
+
+  // ── Banner 2: Metas mes vigente ───────────────────────────────────
+  if (elVigente) {
+    const mesVigenteLabel = (MESES[todayM].charAt(0).toUpperCase() + MESES[todayM].slice(1)).toUpperCase();
+    const currRows = allRows.filter(r => {
+      const d = parseDate(r['Fecha de ingreso']);
+      return d && d.getFullYear() === todayY && d.getMonth() === todayM;
+    });
+    const totalVig = currRows.reduce((s, r) => s + parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']), 0);
+
+    const hayMetasVig = metasDefinidas(todayY, todayM);
+    const metaIdealVig  = hayMetasVig ? METAS_ASESORES.ideal           : 0;
+    const metaMinimaVig = hayMetasVig ? METAS_ASESORES.minima          : 0;
+    const metaComisVig  = hayMetasVig ? METAS_ASESORES.umbralComision  : 0;
+    const pctVig = metaIdealVig > 0 ? totalVig / metaIdealVig * 100 : 0;
+    const colPctVig = pctVig >= 95 ? '#2DA888' : pctVig >= 70 ? '#b45309' : '#c0391b';
+
+    // Actualizar sub del gráfico dinámicamente
+    const sub = document.getElementById('asesores-chart-sub');
+    if (sub) sub.textContent = hayMetasVig
+      ? `Mes vigente · Meta Ideal: ${fmtM(metaIdealVig)} · Meta Mínima: ${fmtM(metaMinimaVig)} · Línea comisión: ${fmtM(metaComisVig)}`
+      : 'Mes vigente · Metas por definir';
+
+    const itemsVig = [
+      `Meta Ideal <strong>${fmtM(metaIdealVig)}</strong>`,
+      `Meta Mínima <strong>${fmtM(metaMinimaVig)}</strong>`,
+      `Línea de Comisión <strong>${fmtM(metaComisVig)}</strong>`,
+      `Recaudado <strong>${fmtM(totalVig)}</strong>`,
+      `<strong style="color:${colPctVig}">${pctVig.toFixed(1)}% cumplido</strong>`,
+    ].join(DOT);
+
+    elVigente.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+        background:#fffbeb;border:1px dashed #d97706;border-radius:10px;
+        padding:10px 16px;margin-bottom:18px;font-size:13px;color:#555;line-height:1.6">
+      <span style="font-size:15px">🎯</span>
+      <strong style="color:#d97706;margin-right:4px">METAS ${mesVigenteLabel} — ASESORES:</strong> ${itemsVig}
+    </div>`;
+  }
+}
+
+
+
 function renderProducto(viewName) {
   const prod = PRODUCTOS[viewName];
   if (!prod) return;
@@ -2447,13 +2831,14 @@ function renderProducto(viewName) {
     : Math.max(1, todayD - 1);
 
   const totalAcum = currRows.reduce((s, r) => s + prodVal(r), 0);
-  const metaTotal = getMetaV2Total(prod.dataKey);
-  const franjas   = getMetaV2Franjas(prod.dataKey);
+  const metaTotal = getMetaV2TotalVigente(prod.dataKey);
+  const franjas   = getMetaV2FranjasVigente(prod.dataKey);
 
   // Título dinámico del gráfico
   const chartTitle = document.getElementById('prod-chart-title');
   if (chartTitle) chartTitle.textContent = `Recaudo acumulado — ${prod.nombre}`;
 
+  renderCierreProd(prod, prodRows);
   renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte);
   renderProdSprints(prod, prodRows, todayY, todayM, metaTotal);
   renderProdChart(prod, prodRows, todayY, todayM, todayD, metaTotal);
