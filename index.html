@@ -1939,7 +1939,7 @@ function renderAsesores() {
   const tabla = document.getElementById('asesor-tabla');
   if (!tabla) return;
   const umbral = METAS_ASESORES.umbralComision;
-  const ideal  = METAS_ASESORES.ideal;
+  const minima = METAS_ASESORES.minima;
   tabla.innerHTML = `
     <div class="section-title" style="margin-bottom:10px">Detalle por Asesor</div>
     <div style="overflow-x:auto">
@@ -1957,7 +1957,7 @@ function renderAsesores() {
         </thead>
         <tbody>
           ${asesores.map((a, i) => {
-            const pct    = hayMetas ? a.total / ideal * 100 : null;
+            const pct    = hayMetas ? a.total / minima * 100 : null;
             const comisiona = hayMetas ? a.total >= umbral : null;
             const colPct = pct == null ? '#999' : pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
             return `<tr style="${i%2===0?'background:#fafafa':''}">
