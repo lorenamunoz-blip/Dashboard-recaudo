@@ -452,6 +452,8 @@ const PRODUCTOS = {
   establecimiento: { nombre: 'Establecimiento', dataKey: 'establecimiento', keyword: 'establec'  },
 };
 const VIEWS_PRODUCTO = ['cosecha', 'agrappay', 'establecimiento'];
+// Meta mensual por defecto para Establecimiento mientras Metas_V2 no traiga una meta propia configurada
+const META_ESTABLECIMIENTO_DEFAULT = 15_000_000;
 
 /* ─── HELPERS ────────────────────────────────────── */
 function parseNum(val) {
@@ -678,11 +680,11 @@ function onMetasData(resp) {
   if (allRows.length) { renderKPIs(); renderBuckets(); renderAsesores(); updateMetasBanner(); }
 }
 
-// Metas del equipo de asesores (comisiones)
+// Metas del equipo de asesores (comisiones) — Septiembre 2026
 const METAS_ASESORES = {
-  minima:        70_344_567,
-  ideal:         80_896_252,
-  get umbralComision() { return this.ideal * 0.70; }, // $56,627,376
+  minima:        54_100_000,
+  ideal:         62_200_000,
+  umbralComision: 41_600_000, // Línea de Comisión
 };
 
 // Metas reales de agosto 2026 (hardcoded hasta que el Sheet las incluya)
@@ -1000,6 +1002,20 @@ function renderKPIs() {
                      : metaIdeal  > 0 ? totalMes / metaIdeal  * 100 : 0;
     const colBase    = pctBase >= 95 ? '#2DA888' : pctBase >= 70 ? '#b86e00' : '#c0391b';
     const metaLines  = `Meta Mínima: ${fmtM(metaMinima)} · Meta Aspiracional: ${fmtM(metaIdeal)}`;
+
+    // Recaudo acumulado a esta misma fecha de corte, pero del mes anterior.
+    const prevM = todayM === 0 ? 11 : todayM - 1;
+    const prevY = todayM === 0 ? todayY - 1 : todayY;
+    const daysInPrevMonth = new Date(prevY, prevM+1, 0).getDate();
+    const prevCutoffDay = Math.min(dCorte, daysInPrevMonth);
+    const prevMonthAcumuladoMismaFecha = allRows
+      .filter(r => {
+        const d = parseDate(r['Fecha de ingreso']);
+        return d && d.getFullYear()===prevY && d.getMonth()===prevM && d.getDate() <= prevCutoffDay;
+      })
+      .reduce((s,r) => s + parseNum(r['VALOR']), 0);
+    const notaMesAnterior = `📅 A la misma fecha, ${MESES_CORTO[prevM].toUpperCase()} ${prevY}: ${fmtM(prevMonthAcumuladoMismaFecha)}`;
+
     const mesGrid = document.getElementById('mes-kpi-grid');
     if (mesGrid) {
       mesGrid.style.gridTemplateColumns = '1fr';
@@ -1007,14 +1023,16 @@ function renderKPIs() {
         `Recaudado a la fecha — ${MESES[todayM]}`,
         fmtM(totalMes),
         metaLines,
-        '#0A0E28', pctBase, null,
+        '#0A0E28', pctBase, notaMesAnterior,
         'border:2px solid #0A0E28;background:rgba(10,14,40,.03);box-shadow:0 4px 16px rgba(10,14,40,.10);');
       const _lbl = mesGrid.querySelector('.kpi-label');
       const _sub = mesGrid.querySelector('.kpi-sub');
       const _pct = mesGrid.querySelector('.kpi-meta-pct');
+      const _extra = mesGrid.querySelector('.kpi-extra');
       if (_lbl) { _lbl.style.color = '#374151'; _lbl.style.fontWeight = '600'; }
       if (_sub) _sub.style.color = '#374151';
       if (_pct) _pct.style.color = colBase;
+      if (_extra) { _extra.style.color = '#6b7280'; _extra.style.marginTop = '8px'; }
     }
 
   } else if (currentView === 'asesores') {
@@ -1841,7 +1859,7 @@ function renderAsesores() {
       };
       if (hayMetas) {
         drawLine(lineIdeal,    '#0A0E28', '100% Meta Ideal');
-        drawLine(lineComision, '#ef4444', '📍 Línea de Comisión — 70%');
+        drawLine(lineComision, '#ef4444', '📍 Línea de Comisión');
       }
     }
   };
@@ -1851,7 +1869,7 @@ function renderAsesores() {
       `<span class="li"><span class="lsq" style="background:${p.color}"></span>${p.label}</span>`
     ).join('') +
     (hayMetas
-      ? `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión (70%)</span>` +
+      ? `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión</span>` +
         `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Ideal (100%)</span>`
       : '');
 
@@ -2286,8 +2304,10 @@ function onMetasV2Data(resp) {
     // Metas del banner ("Meta Ideal Mes" / "Meta Minima Mes") — se detectan por etiqueta
     // ANTES de la lógica de secciones de producto, para que no se cuelen como si fueran
     // una franja más (ej. de Establecimiento, la sección justo anterior a este bloque).
-    if (colAUpper === 'META IDEAL MES')  { banner.metaIdeal  = parseMontoV2(c[1]?.v); return; }
-    if (colAUpper === 'META MINIMA MES' || colAUpper === 'META MÍNIMA MES') { banner.metaMinima = parseMontoV2(c[1]?.v); return; }
+    // La etiqueta puede repetirse más de una vez en la hoja (ej. un bloque vacío duplicado);
+    // solo se guarda un valor si viene con dato real, para no pisar el ya encontrado con 0.
+    if (colAUpper === 'META IDEAL MES')  { const v = parseMontoV2(c[1]?.v); if (v) banner.metaIdeal  = v; return; }
+    if (colAUpper === 'META MINIMA MES' || colAUpper === 'META MÍNIMA MES') { const v = parseMontoV2(c[1]?.v); if (v) banner.metaMinima = v; return; }
 
     // Detectar encabezado de sección (fila de título de producto). Cada producto aparece dos
     // veces en la hoja (bloque base col.B-H con meta en H, y bloque "... Septiembre" solo con
@@ -2704,7 +2724,6 @@ function renderCierreAsesores() {
       `Meta Mínima <strong>${fmtM(metaMinimaVig)}</strong>`,
       `Línea de Comisión <strong>${fmtM(metaComisVig)}</strong>`,
       `Recaudado <strong>${fmtM(totalVig)}</strong>`,
-      `<strong style="color:${colPctVig}">${pctVig.toFixed(1)}% cumplido</strong>`,
     ].join(DOT);
 
     elVigente.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
@@ -2746,7 +2765,9 @@ function renderProducto(viewName) {
     : Math.max(1, todayD - 1);
 
   const totalAcum = currRows.reduce((s, r) => s + prodVal(r), 0);
-  const metaTotal = getMetaV2TotalVigente(prod.dataKey);
+  // Establecimiento: mientras Metas_V2 no traiga meta propia, usar la meta por defecto
+  const metaTotal = getMetaV2TotalVigente(prod.dataKey)
+    || (prod.dataKey === 'establecimiento' ? META_ESTABLECIMIENTO_DEFAULT : null);
   const franjas   = getMetaV2FranjasVigente(prod.dataKey);
 
   // Título dinámico del gráfico
@@ -2754,7 +2775,13 @@ function renderProducto(viewName) {
   if (chartTitle) chartTitle.textContent = `Recaudo acumulado — ${prod.nombre}`;
 
   renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte);
-  renderProdSprints(prod, prodRows, todayY, todayM, metaTotal);
+  // AgrapPay y Establecimiento no llevan sección de Sprints
+  if (prod.dataKey !== 'agrappay' && prod.dataKey !== 'establecimiento') {
+    renderProdSprints(prod, prodRows, todayY, todayM, metaTotal);
+  } else {
+    const elSprints = document.getElementById('prod-sprints');
+    if (elSprints) elSprints.innerHTML = '';
+  }
   renderProdChart(prod, prodRows, todayY, todayM, todayD, metaTotal);
   renderProdDailyChart(prod, currRows, todayY, todayM, dCorte, todayD, metaTotal);
 }
@@ -2794,7 +2821,8 @@ function renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte) {
 
   // Renderizar solo las franjas propias de este producto
   // Para Establecimiento (1 franja "General") no mostramos tarjetas — la hero ya resume todo
-  const mostrarFranjas = franjas.length > 0 && prod.dataKey !== 'establecimiento';
+  // Para AgrapPay se ocultan las tarjetas "Vigente"/"Vencido-Castigado" por pedido explícito
+  const mostrarFranjas = franjas.length > 0 && prod.dataKey !== 'establecimiento' && prod.dataKey !== 'agrappay';
   let bucketsHtml = '';
   franjas.forEach((f, i) => {
     const color  = PROD_FRANJA_PALETTE[i % PROD_FRANJA_PALETTE.length];
@@ -2808,7 +2836,7 @@ function renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte) {
       <div class="prod-franja-card" style="border-left-color:${color}">
         <div class="prod-franja-label" style="color:${color}">${f.label}</div>
         <div class="prod-franja-val">${fmtM(val)}</div>
-        <div class="prod-franja-sub">${txn} pago${txn!==1?'s':''} · día ${dCorte}</div>
+        <div class="prod-franja-sub">día ${dCorte}</div>
         ${mv ? `<div class="prod-franja-meta">Meta: ${fmtM(mv)}</div>` : ''}
         ${pctB != null ? `
           <div class="pbar" style="margin-top:6px">
@@ -2823,7 +2851,7 @@ function renderProdHero(prod, totalAcum, metaTotal, currRows, franjas, dCorte) {
     <div class="prod-hero">
       <div class="prod-hero-label">${prod.nombre} — Recaudo acumulado del mes</div>
       <div class="prod-hero-val" style="color:${pctColor}">${fmtM(totalAcum)}</div>
-      <div class="prod-hero-sub">de ${metaTotal ? fmtM(metaTotal) : 'meta no disponible'} · corte día ${dCorte} · ${currRows.length} pagos</div>
+      <div class="prod-hero-sub">de ${metaTotal ? fmtM(metaTotal) : 'meta no disponible'} · corte día ${dCorte}</div>
       ${barHtml}
     </div>
     ${mostrarFranjas ? `<div class="prod-franja-grid">${bucketsHtml}</div>` : ''}`;
@@ -2896,7 +2924,7 @@ function renderProdChart(prod, prodRows, todayY, todayM, todayD, metaTotal) {
   }
 
   const metaVal   = metaTotal ? +(metaTotal / 1_000_000).toFixed(6) : null;
-  const totalAcum = running * 1_000_000;
+  const totalAcum = running; // running ya está en pesos (suma directa de prodVal), sin escalar
   const pct       = metaVal && metaTotal ? (totalAcum / metaTotal * 100).toFixed(1) : null;
   const sub       = document.getElementById('prod-chart-sub');
   if (sub) sub.textContent = pct
