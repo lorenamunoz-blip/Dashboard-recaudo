@@ -894,10 +894,10 @@ function renderKPIs() {
   const byAsesor = {};
   currMonthRows.forEach(r => {
     const a = String(r[COL_ASESOR]||'').trim();
-    if (!a || a === '#N/D') return;
+    if (!a || a === '#N/D' || a === '#N/A') return;
     byAsesor[a] = (byAsesor[a] || 0) + parseNum(r['VALOR']);
   });
-  const allAsesores = [...new Set(allRows.map(r => String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'))];
+  const allAsesores = [...new Set(allRows.map(r => String(r[COL_ASESOR]||'').trim()).filter(a=>a&&a!=='#N/D'&&a!=='#N/A'))];
   const topAs = Object.entries(byAsesor).sort((a,b) => b[1]-a[1])[0];
   const activosCount = Object.keys(byAsesor).length;
   const promAsesor   = activosCount > 0 ? totalMes / activosCount : 0;
@@ -1808,7 +1808,7 @@ function renderAsesores() {
   const byAsesor = {};
   currMonthRows.forEach(r => {
     const a = String(r[COL_ASESOR]||'').trim();
-    if (!a || a==='#N/D') return;
+    if (!a || a==='#N/D' || a==='#N/A') return;
     if (!byAsesor[a]) byAsesor[a] = { total:0, cosecha:0, agrappay:0, establecimiento:0 };
     const val  = parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']);
     const prod = String(r[COL_PRODUCTO]||'').toLowerCase();
@@ -2351,6 +2351,9 @@ function onMetasV2Data(resp) {
   renderMensualBanner(); // banner real de "Recaudo General" ("🎯 METAS <MES>") — el que se ve en pantalla
   if (currentView === 'mensual') { renderKPIs(); renderMensualSprints(); }
   if (typeof VIEWS_PRODUCTO !== 'undefined' && VIEWS_PRODUCTO.includes(currentView)) renderProducto(currentView);
+  // Si el usuario ya está en Asesores cuando llegan estos datos (carga más lenta que la principal),
+  // refrescar para que el banner de metas y la tabla no se queden desactualizados.
+  if (currentView === 'asesores') renderAsesores();
 }
 
 // Semáforo a nivel de bucket individual (los únicos indicadores de color que quedan)
@@ -2631,7 +2634,7 @@ function renderCierreAsesores() {
     const byAsesor = {};
     prevRowsD.forEach(r => {
       const a = String(r[COL_ASESOR]||'').trim();
-      if (!a || a === '#N/D') return;
+      if (!a || a === '#N/D' || a === '#N/A') return;
       if (!byAsesor[a]) byAsesor[a] = { total:0, cosecha:0, agrappay:0, establecimiento:0, otros:0 };
       const val  = parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']);
       const prod = String(r[COL_PRODUCTO]||'').toLowerCase();
@@ -3071,6 +3074,10 @@ function switchView(name, btn) {
   const isTransicion  = name === 'transicion';
   const isProducto    = VIEWS_PRODUCTO.includes(name);
   if (!isTransicion && !isProducto && lastRendered) { renderKPIs(); renderBuckets(); }
+  // Re-renderizar Asesores en cada visita a la pestaña: la carga de Metas_V2 es asíncrona
+  // e independiente de los datos principales, así que puede llegar antes o después;
+  // esto evita que el banner de metas o la tabla se queden desactualizados por la carrera.
+  if (name === 'asesores' && lastRendered) renderAsesores();
 
   // Se aplica DESPUÉS de renderKPIs()/renderBuckets() a propósito: esas funciones
   // a veces resetean su propio display internamente, así que esta pasada final
