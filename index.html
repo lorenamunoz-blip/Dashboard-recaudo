@@ -680,11 +680,13 @@ function onMetasData(resp) {
   if (allRows.length) { renderKPIs(); renderBuckets(); renderAsesores(); updateMetasBanner(); }
 }
 
-// Metas del equipo de asesores (comisiones) — Septiembre 2026
+// Metas del equipo de asesores (comisiones) — mes vigente (Octubre 2026).
+// Aún no definidas: en cero hasta que se confirmen (los valores de septiembre quedaron
+// cerrados en METAS_ASE_CIERRE, dentro de renderCierreAsesores()).
 const METAS_ASESORES = {
-  minima:        54_100_000,
-  ideal:         62_200_000,
-  umbralComision: 41_600_000, // Línea de Comisión
+  minima:        0,
+  ideal:         0,
+  umbralComision: 0, // Línea de Comisión
 };
 
 // Metas reales de agosto 2026 (hardcoded hasta que el Sheet las incluya)
@@ -696,10 +698,21 @@ const METAS_AGOSTO_2026 = {
   provisional: false,
 };
 
+// Metas reales de septiembre 2026 (mes cerrado; hardcoded porque Metas_V2 solo trae
+// el "mes vigente" y ya rotó a octubre, que aún no tiene metas definidas)
+const METAS_SEPTIEMBRE_2026 = {
+  mensual:      186_584_419, // Meta Ideal
+  minima:       162_247_321, // Meta Mínima (base del % de cumplimiento)
+  diaria:   +(186_584_419 / 30).toFixed(0),
+  semanal:  +(186_584_419 / 4.33).toFixed(0),
+  provisional: false,
+};
+
 // Devuelve true solo si el mes indicado tiene metas reales configuradas
 function metasDefinidas(year, month) {
   if (metasData[`${year}-${month}`]?.mensual) return true;
   if (year === 2026 && month === 7) return true; // Agosto 2026 hardcoded
+  if (year === 2026 && month === 8) return true; // Septiembre 2026 hardcoded
   // Mes en curso: metas ya leídas dinámicamente de Metas_V2 ("Meta Ideal Mes" / "Meta Minima Mes")
   const hoy = new Date();
   if (year === hoy.getFullYear() && month === hoy.getMonth() && metasV2Banner) return true;
@@ -709,8 +722,9 @@ function metasDefinidas(year, month) {
 function getMeta(year, month) {
   const fromSheet = metasData[`${year}-${month}`];
   if (fromSheet?.mensual) return { ...fromSheet, provisional: false };
-  // Agosto 2026: metas confirmadas
+  // Agosto y septiembre 2026: metas confirmadas (meses cerrados)
   if (year === 2026 && month === 7) return METAS_AGOSTO_2026;
+  if (year === 2026 && month === 8) return METAS_SEPTIEMBRE_2026;
   // Meses sin metas configuradas → devuelve ceros para evitar valores ficticios
   return { mensual: 0, minima: 0, diaria: 0, semanal: 0, provisional: true };
 }
@@ -732,10 +746,8 @@ function updateMetasBanner() {
   const metaViejo = getMeta(today.getFullYear(), today.getMonth());
   const text = document.getElementById('metas-banner-text');
 
-  // Se prefieren las metas leídas de Metas_V2 ("Meta Ideal Mes" / "Meta Minima Mes")
-  // sobre las de la pestaña "Metas" cuando ya llegaron — son la fuente vigente del mes.
-  const metaIdeal  = metasV2Banner?.metaIdeal  ?? metaViejo?.mensual ?? null;
-  const metaMinima = metasV2Banner?.metaMinima ?? metaViejo?.minima  ?? null;
+  const metaIdeal  = metaViejo?.mensual ?? null;
+  const metaMinima = metaViejo?.minima  ?? null;
 
   if (!metaIdeal && !metaMinima) {
     text.innerHTML = '<strong>Meta mensual no configurada</strong> para el mes en curso.';
@@ -803,13 +815,7 @@ function renderKPIs() {
   const grid  = document.getElementById('kpi-grid');
   const today = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth(), todayD = today.getDate();
-  const metaViejaKpi = getMeta(todayY, todayM);
-  // Para el mes en curso, la Meta Mensual (Aspiracional) y la Meta Mínima se toman de
-  // Metas_V2 ("Meta Ideal Mes" / "Meta Minima Mes") cuando ya llegaron; diaria/semanal
-  // siguen viniendo de la pestaña "Metas" (Metas_V2 no trae ese desglose).
-  const meta = metasV2Banner
-    ? { ...metaViejaKpi, mensual: metasV2Banner.metaIdeal || metaViejaKpi?.mensual || 0, minima: metasV2Banner.metaMinima || metaViejaKpi?.minima || 0 }
-    : metaViejaKpi;
+  const meta = getMeta(todayY, todayM);
 
   // Current month rows
   const currMonthRows = allRows.filter(r => {
@@ -1563,15 +1569,13 @@ function renderMensualBanner() {
   const bannerVigente = document.getElementById('banner-metas-vigente');
   if (bannerVigente) {
     const mesVigenteLabel = (MESES[todayM].charAt(0).toUpperCase() + MESES[todayM].slice(1)).toUpperCase();
-    // Se prefieren las metas leídas de Metas_V2 ("Meta Ideal Mes" / "Meta Minima Mes",
-    // detectadas por etiqueta) sobre las de la pestaña vieja "Metas" cuando ya llegaron.
     const metaVieja = getMeta(todayY, todayM);
     const totalMes = allRows
       .filter(r => { const d = parseDate(r['Fecha de ingreso']); return d && d.getFullYear()===todayY && d.getMonth()===todayM; })
       .reduce((s, r) => s + parseNum(r['VALOR']), 0);
     // Si meta no está configurada, tratar como $0 (sin división por cero)
-    const metaIdeal  = metasV2Banner?.metaIdeal  || metaVieja?.mensual || 0;
-    const metaMinima = metasV2Banner?.metaMinima || metaVieja?.minima  || 0;
+    const metaIdeal  = metaVieja?.mensual || 0;
+    const metaMinima = metaVieja?.minima  || 0;
     const pct = metaMinima > 0 ? totalMes / metaMinima * 100
               : metaIdeal  > 0 ? totalMes / metaIdeal  * 100 : 0;
     const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
@@ -1591,8 +1595,7 @@ function renderMensualSprints() {
   const today  = new Date();
   const todayY = today.getFullYear(), todayM = today.getMonth();
   const metaVieja = getMeta(todayY, todayM);
-  // Mes en curso: preferir Meta Mínima/Ideal de Metas_V2 sobre la pestaña vieja "Metas"
-  const metaMensual = metasV2Banner?.metaMinima || metasV2Banner?.metaIdeal || metaVieja?.minima || metaVieja?.mensual || null;
+  const metaMensual = metaVieja?.minima || metaVieja?.mensual || null;
 
   // Sprint boundaries: 1→days 1-10, 2→11-20, 3→21-end
   const sprintDays = [[1,10],[11,20],[21,31]];
@@ -1828,7 +1831,7 @@ function renderAsesores() {
   }
 
   // Líneas de referencia — solo cuando las metas del mes vigente están definidas
-  const hayMetas = metasDefinidas(todayY, todayM);
+  const hayMetas = metasDefinidas(todayY, todayM) && METAS_ASESORES.ideal > 0;
   const lineComision = +(METAS_ASESORES.umbralComision / 1_000_000).toFixed(3);
   const lineIdeal    = +(METAS_ASESORES.ideal           / 1_000_000).toFixed(3);
   const maxV = Math.max(...asesores.map(a => a.total/1_000_000), hayMetas ? lineIdeal : 0) * 1.15;
@@ -2582,9 +2585,10 @@ function renderCierreAsesores() {
   const { prevY, prevM, nombre: nombrePrev } = getMesAnteriorInfo();
   const DOT = `<span style="color:#8492a6;margin:0 4px">·</span>`;
 
-  // ── Metas hardcoded de asesores (Agosto 2026) ────────────────────
+  // ── Metas hardcoded de asesores (meses cerrados) ────────────────────
   const METAS_ASE_CIERRE = {
     '2026-7': { ideal: 80_896_252, minima: 70_344_567, comision: 56_627_376 },
+    '2026-8': { ideal: 62_200_000, minima: 54_100_000, comision: 41_600_000 },
   };
   const metasCierre = METAS_ASE_CIERRE[`${prevY}-${prevM}`] || null;
 
@@ -2709,7 +2713,7 @@ function renderCierreAsesores() {
     });
     const totalVig = currRows.reduce((s, r) => s + parseNum(COL_VALOR_PROD ? r[COL_VALOR_PROD] : r['VALOR']), 0);
 
-    const hayMetasVig = metasDefinidas(todayY, todayM);
+    const hayMetasVig = metasDefinidas(todayY, todayM) && METAS_ASESORES.ideal > 0;
     const metaIdealVig  = hayMetasVig ? METAS_ASESORES.ideal           : 0;
     const metaMinimaVig = hayMetasVig ? METAS_ASESORES.minima          : 0;
     const metaComisVig  = hayMetasVig ? METAS_ASESORES.umbralComision  : 0;
