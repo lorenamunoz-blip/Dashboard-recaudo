@@ -372,6 +372,9 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
       <div id="cierre-mes-anterior-asesores"></div>
       <div id="cierre-asesor-detalle"></div>
       <div id="banner-asesores-vigente"></div>
+      <!-- Tabla de detalle por asesor -->
+      <div id="asesor-tabla" style="margin-bottom:24px"></div>
+
       <div class="chart-box">
         <div class="chart-header">
           <div class="chart-title">Recaudo por Asesor — Composición por Producto</div>
@@ -382,9 +385,6 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
         </div>
         <div class="legend" id="asesores-legend"></div>
       </div>
-
-      <!-- Tabla de detalle por asesor -->
-      <div id="asesor-tabla" style="margin-bottom:24px"></div>
 
     </div>
 
@@ -683,6 +683,8 @@ function onMetasData(resp) {
 // Metas del equipo de asesores (comisiones) — mes vigente (Octubre 2026).
 // Aún no definidas: en cero hasta que se confirmen (los valores de septiembre quedaron
 // cerrados en METAS_ASE_CIERRE, dentro de renderCierreAsesores()).
+// Línea de comisión por mes (no viene en Metas_V2): clave "año-mesIdx". Octubre 2026 = $37.139.747
+const LINEA_COMISION_ASESORES = { '2026-9': 37_139_747 };
 const METAS_ASESORES = {
   minima:        0,
   ideal:         0,
@@ -715,7 +717,7 @@ function metasDefinidas(year, month) {
   if (year === 2026 && month === 8) return true; // Septiembre 2026 hardcoded
   // Mes en curso: metas ya leídas dinámicamente de Metas_V2 ("Meta Ideal Mes" / "Meta Minima Mes")
   const hoy = new Date();
-  if (year === hoy.getFullYear() && month === hoy.getMonth() && metasV2Banner) return true;
+  if (year === hoy.getFullYear() && month === hoy.getMonth() && metasV2Banner && metasV2Banner.mes === month) return true;
   return false;
 }
 
@@ -725,6 +727,16 @@ function getMeta(year, month) {
   // Agosto y septiembre 2026: metas confirmadas (meses cerrados)
   if (year === 2026 && month === 7) return METAS_AGOSTO_2026;
   if (year === 2026 && month === 8) return METAS_SEPTIEMBRE_2026;
+  // Mes en curso (ej. octubre): metas leídas de Metas_V2. Cumplimiento siempre sobre la mínima.
+  if (metasV2Banner && metasV2Banner.mes === month && year === new Date().getFullYear()) {
+    const ideal = metasV2Banner.metaIdeal || 0, minima = metasV2Banner.metaMinima || 0;
+    const base = ideal || minima;
+    return {
+      mensual: ideal || minima, minima: minima || ideal,
+      diaria: +(base / 30).toFixed(0), semanal: +(base / 4.33).toFixed(0),
+      provisional: false,
+    };
+  }
   // Meses sin metas configuradas → devuelve ceros para evitar valores ficticios
   return { mensual: 0, minima: 0, diaria: 0, semanal: 0, provisional: true };
 }
@@ -1834,6 +1846,8 @@ function renderAsesores() {
   const hayMetas = metasDefinidas(todayY, todayM) && METAS_ASESORES.ideal > 0;
   const lineComision = +(METAS_ASESORES.umbralComision / 1_000_000).toFixed(3);
   const lineIdeal    = +(METAS_ASESORES.ideal           / 1_000_000).toFixed(3);
+  const lineMinima   = +(METAS_ASESORES.minima          / 1_000_000).toFixed(3);
+  const hayComision  = METAS_ASESORES.umbralComision > 0; // sin línea de comisión definida → no se pinta ni se evalúa
   const maxV = Math.max(...asesores.map(a => a.total/1_000_000), hayMetas ? lineIdeal : 0) * 1.15;
 
   // Plugin de líneas horizontales punteadas
@@ -1861,8 +1875,9 @@ function renderAsesores() {
         ctx.restore();
       };
       if (hayMetas) {
-        drawLine(lineIdeal,    '#0A0E28', '100% Meta Ideal');
-        drawLine(lineComision, '#ef4444', '📍 Línea de Comisión');
+        drawLine(lineIdeal,    '#6A67CE', 'Meta Ideal');
+        drawLine(lineMinima,   '#0A0E28', '100% Meta Mínima');
+        if (hayComision) drawLine(lineComision, '#ef4444', '📍 Línea de Comisión');
       }
     }
   };
@@ -1872,8 +1887,9 @@ function renderAsesores() {
       `<span class="li"><span class="lsq" style="background:${p.color}"></span>${p.label}</span>`
     ).join('') +
     (hayMetas
-      ? `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión</span>` +
-        `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Ideal (100%)</span>`
+      ? (hayComision ? `<span class="li"><span class="lsq" style="background:#ef4444"></span>Línea comisión</span>` : '') +
+        `<span class="li"><span class="lsq" style="background:#6A67CE"></span>Meta Ideal</span>` +
+        `<span class="li"><span class="lsq" style="background:#0A0E28"></span>Meta Mínima (100%)</span>`
       : '');
 
   charts['asesores'] = new Chart(document.getElementById('chart-asesores'), {
@@ -1923,8 +1939,8 @@ function renderAsesores() {
             footer: items => {
               const total = items.reduce((s,i) => s + i.parsed.y, 0);
               if (!hayMetas) return [`Total: ${fmtM(total*1_000_000)}`];
-              const pct = (total / (METAS_ASESORES.ideal/1_000_000) * 100).toFixed(1);
-              return [`Total: ${fmtM(total*1_000_000)} · ${pct}% Meta Ideal`];
+              const pct = (total / (METAS_ASESORES.minima/1_000_000) * 100).toFixed(1);
+              return [`Total: ${fmtM(total*1_000_000)} · ${pct}% Meta Mínima`];
             }
           }
         }
@@ -1955,7 +1971,7 @@ function renderAsesores() {
             <th style="text-align:right">Cosecha +</th>
             <th style="text-align:right">AgrapPay</th>
             <th style="text-align:right">Establecimiento</th>
-            ${hayMetas ? '<th style="text-align:right">% Cumpl.</th><th style="text-align:center">Comisión</th>' : ''}
+            ${hayMetas ? '<th style="text-align:right">% Cumpl. (vs Mínima)</th>' + (hayComision ? '<th style="text-align:center">Comisión</th>' : '') : ''}
           </tr>
         </thead>
         <tbody>
@@ -1971,7 +1987,7 @@ function renderAsesores() {
               <td style="text-align:right;color:#0A0E28">${a.agrappay>0?fmtM(a.agrappay):'—'}</td>
               <td style="text-align:right;color:#0FD6F4">${a.establecimiento>0?fmtM(a.establecimiento):'—'}</td>
               ${hayMetas ? `<td style="text-align:right;font-weight:700;color:${colPct}">${pct.toFixed(1)}%</td>` : ''}
-              ${hayMetas ? `<td style="text-align:center;font-size:13px">${comisiona ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>' : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>` : ''}
+              ${hayMetas && hayComision ? `<td style="text-align:center;font-size:13px">${comisiona ? '<span style="color:#2DA888;font-weight:700">🟢 Comisiona</span>' : '<span style="color:#c0391b;font-weight:700">🔴 Sin Comisión</span>'}</td>` : ''}
             </tr>`;
           }).join('')}
         </tbody>
@@ -2257,6 +2273,7 @@ let metasV2Data = null; // { cosecha:[...buckets], agrappay:[...buckets], establ
 // Se busca por ETIQUETA en toda la hoja, no por número de fila ni por nombre de mes —
 // así sigue funcionando en octubre sin tocar código, mientras el Sheet mantenga esas etiquetas.
 let metasV2Banner = null; // { metaIdeal, metaMinima }
+let metasAsesoresV2 = {}; // { [mesIdx]: { ideal, minima } } — bloques "METAS ASESORES <MES>" de Metas_V2
 
 // Los montos pueden venir como número real (celda con formato moneda) o como texto con
 // puntos/comas como separador de miles — este parser cubre ambos casos.
@@ -2297,6 +2314,9 @@ function onMetasV2Data(resp) {
   let seccionActual = null;
   let encabezadoLeido = false;
   let esSeccionMesVigente = false;
+  let mesBloqueMetas = -1;
+  let mesBloqueAses  = -1;
+  const asesMetas = {};
   const banner = {};
 
   (resp.table.rows || []).forEach(row => {
@@ -2309,8 +2329,29 @@ function onMetasV2Data(resp) {
     // una franja más (ej. de Establecimiento, la sección justo anterior a este bloque).
     // La etiqueta puede repetirse más de una vez en la hoja (ej. un bloque vacío duplicado);
     // solo se guarda un valor si viene con dato real, para no pisar el ya encontrado con 0.
-    if (colAUpper === 'META IDEAL MES')  { const v = parseMontoV2(c[1]?.v); if (v) banner.metaIdeal  = v; return; }
-    if (colAUpper === 'META MINIMA MES' || colAUpper === 'META MÍNIMA MES') { const v = parseMontoV2(c[1]?.v); if (v) banner.metaMinima = v; return; }
+    // Encabezado "METAS <MES>" (se ignora "METAS ASESORES ..."): define a qué mes pertenecen los
+    // "Meta Ideal/Minima Mes" que siguen. Solo se toman los del mes en curso (no pisa septiembre
+    // ni queda desactualizado cuando cambie el mes sin que el Sheet tenga las nuevas metas).
+    if (colAUpper.startsWith('METAS ') && !colAUpper.includes('ASESORES')) {
+      const mi = MESES.findIndex(m => colAUpper.includes(m.toUpperCase()));
+      mesBloqueMetas = mi; mesBloqueAses = -1;
+      return;
+    }
+    if (colAUpper.startsWith('METAS ')) { // METAS ASESORES <MES>: metas del equipo de asesores (no del banner de la empresa)
+      mesBloqueMetas = -1;
+      mesBloqueAses  = MESES.findIndex(m => colAUpper.includes(m.toUpperCase()));
+      return;
+    }
+    if (colAUpper === 'META IDEAL MES' || colAUpper === 'META MINIMA MES' || colAUpper === 'META MÍNIMA MES') {
+      const v = parseMontoV2(c[1]?.v);
+      if (v && mesBloqueAses >= 0) {
+        (asesMetas[mesBloqueAses] = asesMetas[mesBloqueAses] || {})[colAUpper === 'META IDEAL MES' ? 'ideal' : 'minima'] = v;
+      } else if (v && mesBloqueMetas === new Date().getMonth()) {
+        if (colAUpper === 'META IDEAL MES') banner.metaIdeal = v; else banner.metaMinima = v;
+        banner.mes = mesBloqueMetas;
+      }
+      return;
+    }
 
     // Detectar encabezado de sección (fila de título de producto). Cada producto aparece dos
     // veces en la hoja (bloque base col.B-H con meta en H, y bloque "... Septiembre" solo con
@@ -2347,6 +2388,11 @@ function onMetasV2Data(resp) {
     }
   });
 
+  metasAsesoresV2 = asesMetas;
+  // Metas vigentes del equipo de asesores (mes en curso); la línea de comisión no viene en la hoja
+  METAS_ASESORES.ideal  = asesMetas[new Date().getMonth()]?.ideal  || 0;
+  METAS_ASESORES.minima = asesMetas[new Date().getMonth()]?.minima || 0;
+  METAS_ASESORES.umbralComision = LINEA_COMISION_ASESORES[`${new Date().getFullYear()}-${new Date().getMonth()}`] || 0;
   metasV2Data = secciones;
   metasV2Banner = (banner.metaIdeal != null || banner.metaMinima != null) ? banner : null;
   renderMetasV2();
@@ -2590,7 +2636,10 @@ function renderCierreAsesores() {
     '2026-7': { ideal: 80_896_252, minima: 70_344_567, comision: 56_627_376 },
     '2026-8': { ideal: 62_200_000, minima: 54_100_000, comision: 41_600_000 },
   };
-  const metasCierre = METAS_ASE_CIERRE[`${prevY}-${prevM}`] || null;
+  let metasCierre = METAS_ASE_CIERRE[`${prevY}-${prevM}`] || null;
+  // Ideal/mínima del mes anterior: la hoja Metas_V2 ("METAS ASESORES <MES>") manda si trae el dato
+  const asePrev = prevY === new Date().getFullYear() ? metasAsesoresV2[prevM] : null;
+  if (asePrev?.minima) metasCierre = { comision: 0, ...(metasCierre || {}), ideal: asePrev.ideal || metasCierre?.ideal || 0, minima: asePrev.minima };
 
   // ── Banner 1: Cierre mes anterior ────────────────────────────────
   if (elCierre) {
@@ -2604,15 +2653,15 @@ function renderCierreAsesores() {
     const metaIdeal   = metasCierre?.ideal    || 0;
     const metaMinima  = metasCierre?.minima   || 0;
     const metaComis   = metasCierre?.comision || 0;
-    const pct = metaIdeal > 0 ? totalPrev / metaIdeal * 100 : 0;
+    const pct = metaMinima > 0 ? totalPrev / metaMinima * 100 : 0; // cumplimiento siempre sobre la mínima
     const colPct = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b45309' : '#c0391b';
 
     const items = [
       `Meta Ideal <strong>${fmtM(metaIdeal)}</strong>`,
       `Meta Mínima <strong>${fmtM(metaMinima)}</strong>`,
-      `Línea de Comisión <strong>${fmtM(metaComis)}</strong>`,
+      metaComis > 0 ? `Línea de Comisión <strong>${fmtM(metaComis)}</strong>` : null,
       `Recaudado <strong>${fmtM(totalPrev)}</strong>`,
-    ].join(DOT);
+    ].filter(Boolean).join(DOT);
 
     elCierre.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
         background:rgba(10,14,40,.04);border:1.5px solid #0A0E28;border-radius:10px;
@@ -2653,13 +2702,13 @@ function renderCierreAsesores() {
       .filter(a => a.total > 0)
       .sort((a, b) => b.total - a.total);
 
-    const metaIdealDet  = metasCierre?.ideal    || 0;
+    const metaMinimaDet = metasCierre?.minima   || 0;
     const umbralComDet  = metasCierre?.comision || 0;
     const mesLabelDet   = (nombrePrev.charAt(0).toUpperCase() + nombrePrev.slice(1));
 
     if (asesoresDet.length) {
       const rowsDet = asesoresDet.map((a, i) => {
-        const pct       = metaIdealDet > 0 ? a.total / metaIdealDet * 100 : 0;
+        const pct       = metaMinimaDet > 0 ? a.total / metaMinimaDet * 100 : 0;
         const comisiona = umbralComDet > 0 ? a.total >= umbralComDet : false;
         const colPct    = pct >= 95 ? '#2DA888' : pct >= 70 ? '#b86e00' : '#c0391b';
         return `<tr style="${i%2===0?'background:#fafafa':''}">
@@ -2691,7 +2740,7 @@ function renderCierreAsesores() {
                   <th style="text-align:right;color:#0FD6F4">Establecimiento</th>
                   <th style="text-align:right;color:#8492a6">Otros</th>
                   <th style="text-align:right">Recaudo Total</th>
-                  <th style="text-align:right">% Cumpl.</th>
+                  <th style="text-align:right">% Cumpl. (vs Mínima)</th>
                   <th style="text-align:center">Comisión</th>
                 </tr>
               </thead>
@@ -2717,21 +2766,21 @@ function renderCierreAsesores() {
     const metaIdealVig  = hayMetasVig ? METAS_ASESORES.ideal           : 0;
     const metaMinimaVig = hayMetasVig ? METAS_ASESORES.minima          : 0;
     const metaComisVig  = hayMetasVig ? METAS_ASESORES.umbralComision  : 0;
-    const pctVig = metaIdealVig > 0 ? totalVig / metaIdealVig * 100 : 0;
+    const pctVig = metaMinimaVig > 0 ? totalVig / metaMinimaVig * 100 : 0; // sobre la mínima
     const colPctVig = pctVig >= 95 ? '#2DA888' : pctVig >= 70 ? '#b45309' : '#c0391b';
 
     // Actualizar sub del gráfico dinámicamente
     const sub = document.getElementById('asesores-chart-sub');
     if (sub) sub.textContent = hayMetasVig
-      ? `Mes vigente · Meta Ideal: ${fmtM(metaIdealVig)} · Meta Mínima: ${fmtM(metaMinimaVig)} · Línea comisión: ${fmtM(metaComisVig)}`
+      ? `Mes vigente · Meta Ideal: ${fmtM(metaIdealVig)} · Meta Mínima: ${fmtM(metaMinimaVig)}` + (metaComisVig > 0 ? ` · Línea comisión: ${fmtM(metaComisVig)}` : '')
       : 'Mes vigente · Metas por definir';
 
     const itemsVig = [
       `Meta Ideal <strong>${fmtM(metaIdealVig)}</strong>`,
       `Meta Mínima <strong>${fmtM(metaMinimaVig)}</strong>`,
-      `Línea de Comisión <strong>${fmtM(metaComisVig)}</strong>`,
+      metaComisVig > 0 ? `Línea de Comisión <strong>${fmtM(metaComisVig)}</strong>` : null,
       `Recaudado <strong>${fmtM(totalVig)}</strong>`,
-    ].join(DOT);
+    ].filter(Boolean).join(DOT);
 
     elVigente.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
         background:#fffbeb;border:1px dashed #d97706;border-radius:10px;
