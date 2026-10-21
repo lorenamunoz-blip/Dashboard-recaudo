@@ -232,6 +232,8 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
           <button class="tab tab-producto" onclick="switchView('agrappay',this)">AgrapPay</button>
           <button class="tab tab-producto" onclick="switchView('establecimiento',this)">Establecimiento</button>
           <button class="tab" onclick="switchView('asesores',this)">Asesores</button>
+          <button class="tab" onclick="switchView('historico',this)">Histórico Detallado por Mes</button>
+          <button class="tab" onclick="switchView('forecast',this)">Forecast</button>
         </div>
       </div>
     </div>
@@ -386,6 +388,18 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
         <div class="legend" id="asesores-legend"></div>
       </div>
 
+    </div>
+
+    <!-- HISTÓRICO DETALLADO POR MES -->
+    <div class="view" id="view-historico">
+      <div class="section-title">Histórico detallado por mes — recaudo por producto y franja de mora</div>
+      <div id="historico-meses"></div>
+    </div>
+
+    <!-- FORECAST -->
+    <div class="view" id="view-forecast">
+      <div id="forecast-msg"></div>
+      <div id="forecast-tablas"></div>
     </div>
 
   </div>
@@ -798,6 +812,7 @@ function render() {
   renderSemanal();
   renderMensual();
   renderAsesores();
+  if (currentView === 'historico') renderHistorico();
   updateMetasBanner();
   // Ocultar elementos globales que no aplican a la vista inicial
   CARTERA_ELS.forEach(id => {
@@ -2579,6 +2594,294 @@ function updateTransObs(id, val) {
   if (el) el.innerHTML = val ? val : '<span style="color:#ccc;font-style:italic">Sin observaciones</span>';
 }
 
+/* ─── HISTÓRICO DETALLADO POR MES ────────────────────────────────────────────
+   Un bloque por mes (más reciente arriba) con una tarjeta por producto.
+   - Cosecha +: una línea por franja de "Rango de mora" (nombres normalizados).
+   - AgrapPay: solo Vigente (= Al día) y Vencido (= cualquier Mora). Lo demás (Finalizado,
+     #REF!, #N/A, vacío…) se lista aparte para poder identificarlo.
+   - Establecimiento: solo el valor total, sin franjas.
+   - Los #REF! / #N/A / vacíos NO se mezclan: salen como línea propia por producto y por
+     tipo de error, así se puede ver a qué producto pertenece cada uno. */
+function normFranjaHist(raw) {
+  const t = String(raw ?? '').trim();
+  if (!t) return { key: 'Sin clasificar (vacío)', orden: 900, sinClasificar: true };
+  if (t.startsWith('#')) return { key: `Sin clasificar (${t.toUpperCase()})`, orden: 901, sinClasificar: true };
+  const n = t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+  if (n === 'al dia') return { key: 'Al día', orden: 0, alDia: true };
+  if (n === 'vigente') return { key: 'Vigente', orden: 0, alDia: true };
+  if (n === 'vencido' || n === 'vencido/castigado') return { key: 'Vencido', orden: 5, mora: true };
+  // Rangos de mora ("Mora 1-30", "Mora 31-60", "Mora > 90"…): nombre normalizado y orden por límite inferior
+  let m = n.match(/^mora\s*(\d+)\s*-\s*(\d+)$/);
+  if (m) return { key: `Mora ${m[1]}-${m[2]}`, orden: 1 + (+m[1]) / 1000, mora: true };
+  m = n.match(/^mora\s*>\s*(\d+)$/);
+  if (m) return { key: `Mora > ${m[1]}`, orden: 1 + (+m[1] + 0.5) / 1000, mora: true };
+  // Esquema de junio: "0-30 DIAS", "31-90 DIAS", ">120 DIAS" (no es Al día / Mora: se muestra tal cual)
+  m = n.match(/^(\d+)\s*-\s*(\d+)\s*dias?$/);
+  if (m) return { key: `${m[1]}-${m[2]} días`, orden: 1 + (+m[1]) / 1000, dias: true, dias030: +m[1] === 0 && +m[2] === 30 };
+  m = n.match(/^>\s*(\d+)\s*dias?$/);
+  if (m) return { key: `> ${m[1]} días`, orden: 1 + (+m[1] + 0.5) / 1000, dias: true };
+  return { key: t.charAt(0).toUpperCase() + t.slice(1), orden: 100, mora: n.startsWith('mora'), finalizado: n === 'finalizado' };
+}
+
+function renderHistorico() {
+  const cont = document.getElementById('historico-meses');
+  if (!cont) return;
+  const hoy = new Date();
+  const PRODS = [
+    { id: 'cosecha',         nombre: 'Cosecha +',       kw: 'cosecha',  color: '#29DBA4' },
+    { id: 'agrappay',        nombre: 'AgrapPay',        kw: 'agrap',    color: '#0A0E28' },
+    { id: 'establecimiento', nombre: 'Establecimiento', kw: 'establec', color: '#0FD6F4' },
+  ];
+
+  // meses[`año-mes`].prods[prodId] = { total, franjas: { [franja]: {val, ...} } }
+  const meses = {};
+  allRows.forEach(r => {
+    const d = parseDate(r['Fecha de ingreso']);
+    if (!d) return;
+    const val = prodVal(r);
+    const prodTxt = String(r[COL_PRODUCTO] || '').trim();
+    const p = PRODS.find(x => prodTxt.toLowerCase().includes(x.kw));
+    const prodId = p ? p.id : (prodTxt ? 'otro:' + prodTxt : 'sinproducto');
+    const mk = `${d.getFullYear()}-${d.getMonth()}`;
+    const mes = meses[mk] = meses[mk] || { year: d.getFullYear(), month: d.getMonth(), prods: {} };
+    const pr = mes.prods[prodId] = mes.prods[prodId] || { total: 0, franjas: {} };
+    pr.total += val;
+    const f = normFranjaHist(r[COL_MORA_PROD]);
+    const fr = pr.franjas[f.key] = pr.franjas[f.key] || { val: 0, ...f };
+    fr.val += val;
+  });
+
+  // Solo meses cerrados: se excluye el mes vigente
+  const lista = Object.values(meses)
+    .filter(m => !(m.year === hoy.getFullYear() && m.month === hoy.getMonth()))
+    .sort((a, b) => b.year - a.year || b.month - a.month);
+  if (!lista.length) { cont.innerHTML = '<p style="color:#999;font-size:13px">Sin datos.</p>'; return; }
+
+  const filaFranja = (label, val, total, tenue) => {
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;
+        border-top:1px solid #f0f3f6;font-size:12px;color:${tenue ? '#8492a6' : '#0A0E28'}">
+      <span>${label}</span>
+      <span style="white-space:nowrap"><strong>${fmtM(val)}</strong></span>
+    </div>`;
+  };
+  const tarjeta = (titulo, color, total, filas) => `<div style="background:#fff;border:1px solid #e8edf2;border-top:3px solid ${color};
+      border-radius:10px;padding:14px 16px;flex:1;min-width:210px">
+    <div style="font-size:10px;font-weight:700;color:#8492a6;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">${titulo}</div>
+    <div style="font-size:20px;font-weight:800;color:#0A0E28;margin-bottom:${filas ? 8 : 0}px">${fmtM(total)}</div>
+    ${filas || ''}
+  </div>`;
+
+  cont.innerHTML = lista.map(m => {
+    const totalMes = Object.values(m.prods).reduce((s, p) => s + p.total, 0);
+    const enCurso = m.year === hoy.getFullYear() && m.month === hoy.getMonth();
+    const label = (MESES[m.month].charAt(0).toUpperCase() + MESES[m.month].slice(1)).toUpperCase() + ' ' + m.year;
+    const ordenadas = pid => Object.values(m.prods[pid].franjas).sort((a, b) => a.orden - b.orden || a.key.localeCompare(b.key));
+
+    const cards = [];
+    // Cosecha +: todas las franjas, tal cual vienen (normalizadas)
+    if (m.prods.cosecha) {
+      const p = m.prods.cosecha;
+      cards.push(tarjeta('Cosecha +', '#29DBA4', p.total,
+        ordenadas('cosecha').map(f => filaFranja(f.key, f.val, p.total, f.sinClasificar)).join('')));
+    }
+    // AgrapPay: Vigente / Vencido, y lo demás aparte
+    if (m.prods.agrappay) {
+      const p = m.prods.agrappay;
+      let vig = 0, ven = 0;
+      const resto = [];
+      Object.values(p.franjas).forEach(f => {
+        // Vigente = Al día / Vigente / Finalizado / "0-30 días" (esquema de junio); Vencido = Mora* / Vencido / demás rangos en días
+        if (f.alDia || f.finalizado || f.dias030) vig += f.val; else if (f.mora || f.dias) ven += f.val; else resto.push(f);
+      });
+      resto.sort((a, b) => a.orden - b.orden || a.key.localeCompare(b.key));
+      const filas = filaFranja('Vigente', vig, p.total) + filaFranja('Vencido', ven, p.total) +
+        resto.map(f => filaFranja(f.key, f.val, p.total, true)).join('');
+      cards.push(tarjeta('AgrapPay', '#0A0E28', p.total, filas));
+    }
+    // Establecimiento: solo valor
+    if (m.prods.establecimiento) cards.push(tarjeta('Establecimiento', '#0FD6F4', m.prods.establecimiento.total, ''));
+    // Filas sin producto reconocido: tarjeta aparte, con su franja/error para poder identificarlas
+    Object.keys(m.prods).filter(k => k === 'sinproducto' || k.startsWith('otro:')).forEach(k => {
+      const p = m.prods[k];
+      const nombre = k === 'sinproducto' ? 'Pagos sin asignar' : k.slice(5);
+      cards.push(tarjeta(nombre, '#8492a6', p.total,
+        ordenadas(k).map(f => filaFranja(f.key, f.val, p.total, true)).join('')));
+    });
+
+    return `<div style="margin-bottom:26px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(10,14,40,.04);
+          border:1.5px solid #0A0E28;border-radius:10px;padding:10px 16px;margin-bottom:10px;font-size:13px;color:#0A0E28;line-height:1.4">
+        <span style="font-size:15px">${enCurso ? '📅' : '✅'}</span>
+        <strong style="margin-right:4px">${enCurso ? 'EN CURSO' : 'CIERRE'} ${label}:</strong>
+        Recaudado <strong>${fmtM(totalMes)}</strong>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start">${cards.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── FORECAST: proyección de recaudo por mes y franja ───────────────────────
+   Fuente: pestaña "Forecast Mensual" del Google Sheet (columnas: Mes | Al día | Mora 1-30 |
+   Mora > 30 | Mora > 60 | Mora > 90 | Pagado parcialmente | Total | Saldo Remanente).
+   Se pide por NOMBRE de pestaña (sin gid) y con headers=0; si la pestaña no existe, Google
+   devuelve la primera hoja, por eso se valida que la celda A1 diga "Mes".
+   - Las filas de meses ya vencidos (etiqueta con nombre de mes en vez de "AAAA-MM", o mes
+     anterior al actual) van en un bloque aparte: "Vencido de meses anteriores".
+   - El resto es el forecast y alimenta tarjetas, gráfico y tabla. */
+const FORECAST_SHEET = 'Forecast Mensual';
+const FORECAST_FRANJAS = [
+  { key: 'Al día',      color: '#29DBA4' },
+  { key: 'Mora 1-30',   color: '#0FD6F4' },
+  { key: 'Mora > 30',   color: '#6A67CE' },
+  { key: 'Mora > 60',   color: '#b86e00' },
+  { key: 'Mora > 90',   color: '#c0391b' },
+];
+let forecastState = null; // null = sin cargar · { error } · { filas }
+
+function loadForecast() {
+  const old = document.getElementById('script-forecast');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-forecast';
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onForecastData&sheet=${encodeURIComponent(FORECAST_SHEET)}&headers=0&_=${Date.now()}`;
+  s.onerror = () => { forecastState = { error: 'No se pudo leer el Google Sheet.' }; renderForecast(); };
+  document.head.appendChild(s);
+}
+
+function onForecastData(resp) {
+  forecastState = parseForecast(resp);
+  if (currentView === 'forecast') renderForecast();
+}
+
+function parseForecast(resp) {
+  if (!resp || resp.status !== 'ok') return { error: 'No se pudo leer el Google Sheet.' };
+  const rows = resp.table.rows || [];
+  const cel = (r, i) => r.c?.[i]?.v;
+  const quitaTildes = t => String(t ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Si la pestaña no existe, Google devuelve la primera hoja (pagos). Se valida por el encabezado:
+  // A1 = "Mes" o B1 = "Al día" (según el tipo de cada columna, Google descarta unos títulos u otros)
+  if (quitaTildes(cel(rows[0] || {}, 0)) !== 'mes' && quitaTildes(cel(rows[0] || {}, 1)) !== 'al dia') {
+    return { error: `No encuentro la pestaña "${FORECAST_SHEET}" en el Google Sheet (o su fila 1 no trae los encabezados Mes | Al día | Mora 1-30 …). Pega allí la hoja del Excel y vuelve a entrar.` };
+  }
+  const hoy = new Date();
+  // Monto: número, o texto con formato moneda ("$72.959.936", "-$900.00")
+  const monto = v => {
+    if (typeof v === 'number') return v;
+    let t = String(v ?? '').replace(/[$\s]/g, '');
+    if (!t) return 0;
+    const neg = t.startsWith('-') || (t.startsWith('(') && t.endsWith(')'));
+    t = t.replace(/[-()]/g, '');
+    if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, '').replace(',', '.'); // 1.234.567[,89]
+    else t = t.replace(',', '.');
+    const n = parseFloat(t) || 0;
+    return neg ? -n : n;
+  };
+  const filas = [];
+  const avisos = [];
+  rows.slice(1).forEach(r => {
+    const v0 = cel(r, 0);
+    let y = null, m = null, iso = false;
+    const fecha = v0 instanceof Date ? [v0.getFullYear(), v0.getMonth()]
+      : (String(v0 ?? '').match(/^Date\((\d+),(\d+)/) || []).slice(1, 3).map(Number);
+    if (fecha.length === 2) { y = fecha[0]; m = fecha[1]; iso = true; }          // columna Mes como fecha
+    else {
+      const label = String(v0 ?? '').trim();
+      const t = label.match(/^(\d{4})-(\d{1,2})$/);
+      if (t) { y = +t[1]; m = +t[2] - 1; iso = true; }                            // "2026-10"
+      else if (MESES.includes(label.toLowerCase())) m = MESES.indexOf(label.toLowerCase()); // "Julio"
+    }
+    const fr = [1, 2, 3, 4, 5].map(i => monto(cel(r, i)));
+    const parcial = monto(cel(r, 6));
+    const hayDatos = [1, 2, 3, 4, 5, 6, 7].some(i => String(cel(r, i) ?? '').trim() !== '');
+    if (!iso && m === null && !(String(v0 ?? '').trim() === '' && hayDatos)) return; // notas, filas vacías…
+    const totalH = cel(r, 7);
+    const total = (totalH === undefined || totalH === null || totalH === '')
+      ? fr.reduce((s, v) => s + v, 0) + parcial : monto(totalH);
+    filas.push({ iso, y, m, fr, parcial, total, saldo: monto(cel(r, 8)) });
+  });
+  if (!filas.length) return { error: 'La pestaña de forecast no trae filas de meses.' };
+  // Los meses con nombre ("Julio") no traen año: se deducen hacia atrás desde el primer "AAAA-MM"
+  const iIso = filas.findIndex(f => f.iso);
+  if (iIso < 0) filas.forEach(f => { f.y = hoy.getFullYear(); if (f.m === null) f.m = 0; });
+  else {
+    for (let k = iIso - 1; k >= 0; k--) {
+      const sig = filas[k + 1];
+      filas[k].m = sig.m === 0 ? 11 : sig.m - 1;
+      filas[k].y = sig.m === 0 ? sig.y - 1 : sig.y;
+    }
+  }
+  filas.forEach(f => {
+    f.label = `${MESES_CORTO[f.m].charAt(0).toUpperCase()}${MESES_CORTO[f.m].slice(1)} ${f.y}`;
+    f.pasado = !f.iso || f.y < hoy.getFullYear() || (f.y === hoy.getFullYear() && f.m < hoy.getMonth());
+    // Cuadre: franjas + pagado parcialmente deben dar el Total (tolerancia $1.000)
+    if (Math.abs(f.fr.reduce((a, v) => a + v, 0) + f.parcial - f.total) > 1000) avisos.push(f.label);
+  });
+  return { filas, avisos };
+}
+
+function renderForecast() {
+  const msg = document.getElementById('forecast-msg');
+  const tablas = document.getElementById('forecast-tablas');
+  if (!msg) return;
+  if (forecastState === null) {
+    msg.innerHTML = '<p style="color:#999;font-size:13px">Cargando forecast…</p>';
+    tablas.innerHTML = ''; return;
+  }
+  if (forecastState.error) {
+    msg.innerHTML = `<div class="metas-ph" style="border-color:#d97706;background:#fffbeb">⚠️ <span>${forecastState.error}</span></div>`;
+    tablas.innerHTML = ''; return;
+  }
+  msg.innerHTML = forecastState.avisos?.length
+    ? `<div class="metas-ph" style="border-color:#d97706;background:#fffbeb;align-items:flex-start">⚠️ <span><strong>Los montos del Sheet no cuadran con el Total</strong> en: ${forecastState.avisos.join(', ')}.
+        Suele pasar al pegar con formato de moneda (los valores menores a $1.000.000 se dañan). Vuelve a pegar la hoja como valores numéricos o importa el CSV.</span></div>`
+    : '';
+
+  const filas = forecastState.filas;
+  const neg = v => (v < 0 ? '-' : '') + fmtM(Math.abs(v));
+  const celda = (v, color, max) => {
+    const a = max > 0 && v > 0 ? (0.07 + 0.33 * v / max).toFixed(3) : 0;
+    return `<td style="text-align:right;${a ? `background:${color}${Math.round(a * 255).toString(16).padStart(2, '0')}` : 'color:#c5ccd6'}"
+      title="${v.toLocaleString('es-CO')}">${v === 0 ? '—' : neg(v)}</td>`;
+  };
+
+  // ── Tablas ──
+  const tabla = (titulo, sub, lista, conSubtotal) => {
+    const maxCol = i => Math.max(...lista.map(f => f.fr[i]), 0);
+    const maxes = FORECAST_FRANJAS.map((_, i) => maxCol(i));
+    // Fila de apertura: la cartera con la que se abre (saldo remanente tras el 1er mes + lo de ese mes)
+    const apertura = lista === filas
+      ? `<tr style="background:#eefaf6;border-bottom:2px solid #29DBA4">
+        <td style="font-weight:800;color:#0A0E28;white-space:nowrap">Saldo cartera</td>
+        <td colspan="7"></td>
+        <td style="text-align:right;font-weight:800;color:#0A0E28" title="${(filas[0].saldo + filas[0].total).toLocaleString('es-CO')}">${neg(filas[0].saldo + filas[0].total)}</td>
+      </tr>` : '';
+    const cuerpo = lista.map((f, k) => `<tr style="${f.pasado ? 'background:#d9dfe8;box-shadow:inset 3px 0 0 #c0391b' : k % 2 ? 'background:#fafafa' : ''}">
+        <td style="font-weight:600;color:#111;white-space:nowrap">${f.label}</td>
+        ${f.fr.map((v, i) => celda(v, FORECAST_FRANJAS[i].color, maxes[i])).join('')}
+        <td style="text-align:right;color:#8492a6" title="${f.parcial.toLocaleString('es-CO')}">${f.parcial === 0 ? '—' : neg(f.parcial)}</td>
+        <td style="text-align:right;font-weight:800;color:#0A0E28" title="${f.total.toLocaleString('es-CO')}">${neg(f.total)}</td>
+        <td style="text-align:right;color:#555" title="${f.saldo.toLocaleString('es-CO')}">${neg(f.saldo)}</td>
+      </tr>`).join('');
+    const sum = i => lista.reduce((s, f) => s + f.fr[i], 0);
+    const pie = conSubtotal ? `<tr style="border-top:2px solid #0A0E28;font-weight:800">
+        <td>Subtotal</td>
+        ${FORECAST_FRANJAS.map((_, i) => `<td style="text-align:right">${neg(sum(i))}</td>`).join('')}
+        <td style="text-align:right;color:#8492a6">${neg(lista.reduce((s, f) => s + f.parcial, 0))}</td>
+        <td style="text-align:right">${neg(lista.reduce((s, f) => s + f.total, 0))}</td>
+        <td></td></tr>` : '';
+    return `<div style="margin-bottom:22px">
+      <div class="section-title" style="margin-bottom:4px">${titulo}</div>
+      ${sub ? `<div style="font-size:11px;color:#8492a6;margin-bottom:8px">${sub}</div>` : '<div style="margin-bottom:8px"></div>'}
+      <div style="overflow-x:auto"><table class="gestion-table" style="width:100%">
+        <thead><tr><th>Mes</th>${FORECAST_FRANJAS.map(p => `<th style="text-align:right">${p.key}</th>`).join('')}
+          <th style="text-align:right">Pagado parcialmente</th><th style="text-align:right">Total</th><th style="text-align:right">Saldo remanente</th></tr></thead>
+        <tbody>${apertura}${cuerpo}${pie}</tbody>
+      </table></div></div>`;
+  };
+  // Una sola tabla con todos los meses (los vencidos de meses anteriores van al inicio, junto al resto)
+  tablas.innerHTML = tabla('Forecast mensual', '', filas, false);
+}
+
 /* ─── PRODUCTOS: Cosecha+, AgrapPay, Establecimiento ────────────────────────
    Fuente de metas  → metasV2Data (ya cargado desde Metas_V2)
    Fuente de pagos  → allRows filtrado por COL_PRODUCTO (columna E de Pagos)
@@ -3113,7 +3416,7 @@ function renderProdDailyChart(prod, currRows, todayY, todayM, dCorte, todayD, me
 /* ─── NAVEGACIÓN ─────────────────────────────────── */
 const CARTERA_ELS = ['metas-banner', 'kpi-grid', 'bucket-section'];
 // Vistas que NO usan el banner de metas / kpi-grid / bucket-section genéricos (tienen su propio contenido)
-const HIDE_CARTERA_VIEWS = ['transicion', 'mensual', 'asesores', 'metasv2', 'cosecha', 'agrappay', 'establecimiento'];
+const HIDE_CARTERA_VIEWS = ['transicion', 'mensual', 'asesores', 'historico', 'forecast', 'metasv2', 'cosecha', 'agrappay', 'establecimiento'];
 
 function switchView(name, btn) {
   currentView = name;
@@ -3131,6 +3434,8 @@ function switchView(name, btn) {
   // e independiente de los datos principales, así que puede llegar antes o después;
   // esto evita que el banner de metas o la tabla se queden desactualizados por la carrera.
   if (name === 'asesores' && lastRendered) renderAsesores();
+  if (name === 'historico' && lastRendered) renderHistorico();
+  if (name === 'forecast') { renderForecast(); loadForecast(); } // se relee el Sheet en cada visita
 
   // Se aplica DESPUÉS de renderKPIs()/renderBuckets() a propósito: esas funciones
   // a veces resetean su propio display internamente, así que esta pasada final
