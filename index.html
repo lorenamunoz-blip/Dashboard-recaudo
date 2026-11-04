@@ -751,6 +751,19 @@ function getMeta(year, month) {
       provisional: false,
     };
   }
+  // Mes ya cerrado que sí tiene bloque "METAS <MES>" en Metas_V2 (ej. octubre en el panel de cierre de noviembre).
+  // El Sheet no trae año: un mes posterior al actual se interpreta como del año pasado (ej. diciembre visto en enero).
+  const hoyG = new Date();
+  const anioSheet = month <= hoyG.getMonth() ? hoyG.getFullYear() : hoyG.getFullYear() - 1;
+  const bm = metasMesV2[month];
+  if (bm && year === anioSheet && (bm.ideal || bm.minima)) {
+    const ideal = bm.ideal || 0, minima = bm.minima || 0, base = ideal || minima;
+    return {
+      mensual: ideal || minima, minima: minima || ideal,
+      diaria: +(base / 30).toFixed(0), semanal: +(base / 4.33).toFixed(0),
+      provisional: false,
+    };
+  }
   // Meses sin metas configuradas → devuelve ceros para evitar valores ficticios
   return { mensual: 0, minima: 0, diaria: 0, semanal: 0, provisional: true };
 }
@@ -2288,6 +2301,7 @@ let metasV2Data = null; // { cosecha:[...buckets], agrappay:[...buckets], establ
 // Se busca por ETIQUETA en toda la hoja, no por número de fila ni por nombre de mes —
 // así sigue funcionando en octubre sin tocar código, mientras el Sheet mantenga esas etiquetas.
 let metasV2Banner = null; // { metaIdeal, metaMinima }
+let metasMesV2 = {};      // { [mesIdx]: { ideal, minima } } — todos los bloques "METAS <MES>" de Metas_V2 (para el panel de cierre del mes anterior)
 let metasAsesoresV2 = {}; // { [mesIdx]: { ideal, minima } } — bloques "METAS ASESORES <MES>" de Metas_V2
 
 // Los montos pueden venir como número real (celda con formato moneda) o como texto con
@@ -2332,6 +2346,7 @@ function onMetasV2Data(resp) {
   let mesBloqueMetas = -1;
   let mesBloqueAses  = -1;
   const asesMetas = {};
+  const mesMetas = {};
   const banner = {};
 
   (resp.table.rows || []).forEach(row => {
@@ -2361,9 +2376,12 @@ function onMetasV2Data(resp) {
       const v = parseMontoV2(c[1]?.v);
       if (v && mesBloqueAses >= 0) {
         (asesMetas[mesBloqueAses] = asesMetas[mesBloqueAses] || {})[colAUpper === 'META IDEAL MES' ? 'ideal' : 'minima'] = v;
-      } else if (v && mesBloqueMetas === new Date().getMonth()) {
-        if (colAUpper === 'META IDEAL MES') banner.metaIdeal = v; else banner.metaMinima = v;
-        banner.mes = mesBloqueMetas;
+      } else if (v && mesBloqueMetas >= 0) {
+        (mesMetas[mesBloqueMetas] = mesMetas[mesBloqueMetas] || {})[colAUpper === 'META IDEAL MES' ? 'ideal' : 'minima'] = v;
+        if (mesBloqueMetas === new Date().getMonth()) { // mes en curso → banner "🎯 METAS <MES>"
+          if (colAUpper === 'META IDEAL MES') banner.metaIdeal = v; else banner.metaMinima = v;
+          banner.mes = mesBloqueMetas;
+        }
       }
       return;
     }
@@ -2404,6 +2422,7 @@ function onMetasV2Data(resp) {
   });
 
   metasAsesoresV2 = asesMetas;
+  metasMesV2 = mesMetas;
   // Metas vigentes del equipo de asesores (mes en curso); la línea de comisión no viene en la hoja
   METAS_ASESORES.ideal  = asesMetas[new Date().getMonth()]?.ideal  || 0;
   METAS_ASESORES.minima = asesMetas[new Date().getMonth()]?.minima || 0;
@@ -2943,6 +2962,8 @@ function renderCierreAsesores() {
   // Ideal/mínima del mes anterior: la hoja Metas_V2 ("METAS ASESORES <MES>") manda si trae el dato
   const asePrev = prevY === new Date().getFullYear() ? metasAsesoresV2[prevM] : null;
   if (asePrev?.minima) metasCierre = { comision: 0, ...(metasCierre || {}), ideal: asePrev.ideal || metasCierre?.ideal || 0, minima: asePrev.minima };
+  // Línea de comisión del mes anterior: si no está en METAS_ASE_CIERRE, se toma de LINEA_COMISION_ASESORES (p. ej. Octubre 2026)
+  if (metasCierre && !metasCierre.comision) metasCierre.comision = LINEA_COMISION_ASESORES[`${prevY}-${prevM}`] || 0;
 
   // ── Banner 1: Cierre mes anterior ────────────────────────────────
   if (elCierre) {
