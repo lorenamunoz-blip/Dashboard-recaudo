@@ -2830,7 +2830,7 @@ function renderMoraPlano() {
     el.innerHTML = `<div class="metas-ph" style="border-color:#d97706;background:#fffbeb">⚠️ <span>${moraPlanoState.error}</span></div>`;
     return;
   }
-  el.innerHTML = `<div class="bucket-grid">${FORECAST_FRANJAS.map(p => {
+  el.innerHTML = `<div class="section-title">Total saldo de cartera por franja de mora</div><div class="bucket-grid">${FORECAST_FRANJAS.map(p => {
     const v = moraPlanoState.valores[p.key] ?? 0;
     return `<div class="bucket" style="border-left-color:${p.color}">
       <div class="bucket-name" style="color:${p.color}">${p.key}</div>
