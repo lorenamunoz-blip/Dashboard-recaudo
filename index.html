@@ -398,6 +398,7 @@ body { font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; bac
 
     <!-- FORECAST -->
     <div class="view" id="view-forecast">
+      <div id="forecast-tarjetas"></div>
       <div id="forecast-msg"></div>
       <div id="forecast-tablas"></div>
     </div>
@@ -698,7 +699,7 @@ function onMetasData(resp) {
 // Aún no definidas: en cero hasta que se confirmen (los valores de septiembre quedaron
 // cerrados en METAS_ASE_CIERRE, dentro de renderCierreAsesores()).
 // Línea de comisión por mes (no viene en Metas_V2): clave "año-mesIdx". Octubre 2026 = $37.139.747
-const LINEA_COMISION_ASESORES = { '2026-9': 37_139_747 };
+const LINEA_COMISION_ASESORES = { '2026-9': 37_139_747, '2026-10': 33_375_347 };
 const METAS_ASESORES = {
   minima:        0,
   ideal:         0,
@@ -2762,7 +2763,9 @@ function loadForecast() {
   if (old) old.remove();
   const s = document.createElement('script');
   s.id  = 'script-forecast';
-  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onForecastData&sheet=${encodeURIComponent(FORECAST_SHEET)}&headers=0&_=${Date.now()}`;
+  // headers=1: la fila 1 (Mes | Al día | …) llega SIEMPRE como etiquetas de columna y las filas son solo datos
+  // (con headers=0 Google a veces la descarta por su cuenta y se perdía el primer mes o la validación)
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onForecastData&sheet=${encodeURIComponent(FORECAST_SHEET)}&headers=1&_=${Date.now()}`;
   s.onerror = () => { forecastState = { error: 'No se pudo leer el Google Sheet.' }; renderForecast(); };
   document.head.appendChild(s);
 }
@@ -2772,14 +2775,83 @@ function onForecastData(resp) {
   if (currentView === 'forecast') renderForecast();
 }
 
+/* ─── FORECAST · tarjetas de saldo por franja de mora ────────────────────────
+   Fuente: pestaña "Por Mora Plano" del mismo Google Sheet (Mora Plano | Saldo Pendiente (COP) | Cuotas).
+   Una tarjeta por franja con el saldo total (columna B). La fila "Total" no se pinta.
+   Se pide por nombre de pestaña; si no existe Google devuelve la primera hoja, por eso se valida
+   que aparezca al menos una franja conocida en la columna A. */
+const MORA_PLANO_SHEET = 'Por Mora Plano';
+let moraPlanoState = null; // null = sin cargar · { error } · { valores: {franja: saldo} }
+
+function loadMoraPlano() {
+  const old = document.getElementById('script-mora-plano');
+  if (old) old.remove();
+  const s = document.createElement('script');
+  s.id  = 'script-mora-plano';
+  s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:onMoraPlanoData&sheet=${encodeURIComponent(MORA_PLANO_SHEET)}&headers=0&_=${Date.now()}`;
+  s.onerror = () => { moraPlanoState = { error: 'No se pudo leer el Google Sheet.' }; renderMoraPlano(); };
+  document.head.appendChild(s);
+}
+
+function onMoraPlanoData(resp) {
+  moraPlanoState = parseMoraPlano(resp);
+  renderMoraPlano();
+}
+
+function parseMoraPlano(resp) {
+  if (!resp || resp.status !== 'ok') return { error: 'No se pudo leer el Google Sheet.' };
+  const norm = t => String(t ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '');
+  const num = v => {
+    if (typeof v === 'number') return v;
+    let t = String(v ?? '').replace(/[$\s]/g, '');
+    const neg = t.startsWith('-');
+    t = t.replace(/-/g, '');
+    if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, '').replace(',', '.');
+    else t = t.replace(',', '.');
+    const n = parseFloat(t) || 0;
+    return neg ? -n : n;
+  };
+  const valores = {};
+  (resp.table.rows || []).forEach(r => {
+    const f = FORECAST_FRANJAS.find(p => norm(p.key) === norm(r.c?.[0]?.v));
+    if (f) valores[f.key] = num(r.c?.[1]?.v);
+  });
+  if (!Object.keys(valores).length) {
+    return { error: `No encuentro la pestaña "${MORA_PLANO_SHEET}" en el Google Sheet (columna A con las franjas Al día, Mora 1-30 … y columna B con el saldo).` };
+  }
+  return { valores };
+}
+
+function renderMoraPlano() {
+  const el = document.getElementById('forecast-tarjetas');
+  if (!el) return;
+  if (moraPlanoState === null) { el.innerHTML = ''; return; }
+  if (moraPlanoState.error) {
+    el.innerHTML = `<div class="metas-ph" style="border-color:#d97706;background:#fffbeb">⚠️ <span>${moraPlanoState.error}</span></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="bucket-grid">${FORECAST_FRANJAS.map(p => {
+    const v = moraPlanoState.valores[p.key] ?? 0;
+    return `<div class="bucket" style="border-left-color:${p.color}">
+      <div class="bucket-name" style="color:${p.color}">${p.key}</div>
+      <div class="bucket-val" title="${v.toLocaleString('es-CO')}">${fmtM(v)}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function parseForecast(resp) {
   if (!resp || resp.status !== 'ok') return { error: 'No se pudo leer el Google Sheet.' };
-  const rows = resp.table.rows || [];
+  let rows = resp.table.rows || [];
   const cel = (r, i) => r.c?.[i]?.v;
   const quitaTildes = t => String(t ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   // Si la pestaña no existe, Google devuelve la primera hoja (pagos). Se valida por el encabezado:
-  // A1 = "Mes" o B1 = "Al día" (según el tipo de cada columna, Google descarta unos títulos u otros)
-  if (quitaTildes(cel(rows[0] || {}, 0)) !== 'mes' && quitaTildes(cel(rows[0] || {}, 1)) !== 'al dia') {
+  // 1) con headers=1 la fila 1 llega como etiquetas de columna ("Mes" / "Al día") y todas las filas son datos;
+  // 2) si no, A1 = "Mes" o B1 = "Al día" dentro de las filas (esa primera fila es el encabezado y se omite)
+  const lbl = i => quitaTildes(resp.table.cols?.[i]?.label);
+  const encEnEtiquetas = lbl(0) === 'mes' || lbl(1) === 'al dia';
+  const encEnFila = quitaTildes(cel(rows[0] || {}, 0)) === 'mes' || quitaTildes(cel(rows[0] || {}, 1)) === 'al dia';
+  if (encEnFila && !encEnEtiquetas) rows = rows.slice(1);
+  if (!encEnEtiquetas && !encEnFila) {
     return { error: `No encuentro la pestaña "${FORECAST_SHEET}" en el Google Sheet (o su fila 1 no trae los encabezados Mes | Al día | Mora 1-30 …). Pega allí la hoja del Excel y vuelve a entrar.` };
   }
   const hoy = new Date();
@@ -2797,7 +2869,7 @@ function parseForecast(resp) {
   };
   const filas = [];
   const avisos = [];
-  rows.slice(1).forEach(r => {
+  rows.forEach(r => {
     const v0 = cel(r, 0);
     let y = null, m = null, iso = false;
     const fecha = v0 instanceof Date ? [v0.getFullYear(), v0.getMonth()]
@@ -2816,7 +2888,8 @@ function parseForecast(resp) {
     const totalH = cel(r, 7);
     const total = (totalH === undefined || totalH === null || totalH === '')
       ? fr.reduce((s, v) => s + v, 0) + parcial : monto(totalH);
-    filas.push({ iso, y, m, fr, parcial, total, saldo: monto(cel(r, 8)) });
+    const saldoH = cel(r, 8); // vacío = el mes no lleva saldo remanente (p. ej. meses vencidos)
+    filas.push({ iso, y, m, fr, parcial, total, saldo: (saldoH === undefined || saldoH === null || String(saldoH).trim() === '') ? null : monto(saldoH) });
   });
   if (!filas.length) return { error: 'La pestaña de forecast no trae filas de meses.' };
   // Los meses con nombre ("Julio") no traen año: se deducen hacia atrás desde el primer "AAAA-MM"
@@ -2867,19 +2940,27 @@ function renderForecast() {
   const tabla = (titulo, sub, lista, conSubtotal) => {
     const maxCol = i => Math.max(...lista.map(f => f.fr[i]), 0);
     const maxes = FORECAST_FRANJAS.map((_, i) => maxCol(i));
-    // Fila de apertura: la cartera con la que se abre (saldo remanente tras el 1er mes + lo de ese mes)
-    const apertura = lista === filas
+    // Fila de apertura: la cartera con la que se abre.
+    // - Si el saldo remanente va descontando mes a mes desde la 1ª fila (saldo1 ≈ saldo0 − total1), la cartera
+    //   de apertura es saldo0 + total0.
+    // - Si el saldo de los meses vencidos es constante (ya trae la cartera total, p. ej. v12), es saldo0.
+    // - Si las primeras filas no traen saldo (vacío), se toma la primera fila con saldo: cartera = su saldo + lo de ese mes.
+    const k = filas.findIndex(f => f.saldo != null);
+    const fk = filas[k], fk1 = filas[k + 1];
+    const cae = k >= 0 && fk1 && fk1.saldo != null && Math.abs((fk.saldo - fk1.saldo) - fk1.total) <= 1000;
+    const carteraApertura = k < 0 ? null : (k > 0 || cae) ? fk.saldo + fk.total : fk.saldo;
+    const apertura = (lista === filas && carteraApertura != null)
       ? `<tr style="background:#eefaf6;border-bottom:2px solid #29DBA4">
         <td style="font-weight:800;color:#0A0E28;white-space:nowrap">Saldo cartera</td>
         <td colspan="7"></td>
-        <td style="text-align:right;font-weight:800;color:#0A0E28" title="${(filas[0].saldo + filas[0].total).toLocaleString('es-CO')}">${neg(filas[0].saldo + filas[0].total)}</td>
+        <td style="text-align:right;font-weight:800;color:#0A0E28" title="${carteraApertura.toLocaleString('es-CO')}">${neg(carteraApertura)}</td>
       </tr>` : '';
     const cuerpo = lista.map((f, k) => `<tr style="${f.pasado ? 'background:#d9dfe8;box-shadow:inset 3px 0 0 #c0391b' : k % 2 ? 'background:#fafafa' : ''}">
         <td style="font-weight:600;color:#111;white-space:nowrap">${f.label}</td>
         ${f.fr.map((v, i) => celda(v, FORECAST_FRANJAS[i].color, maxes[i])).join('')}
         <td style="text-align:right;color:#8492a6" title="${f.parcial.toLocaleString('es-CO')}">${f.parcial === 0 ? '—' : neg(f.parcial)}</td>
         <td style="text-align:right;font-weight:800;color:#0A0E28" title="${f.total.toLocaleString('es-CO')}">${neg(f.total)}</td>
-        <td style="text-align:right;color:#555" title="${f.saldo.toLocaleString('es-CO')}">${neg(f.saldo)}</td>
+        <td style="text-align:right;${f.saldo == null ? 'color:#c5ccd6' : 'color:#555'}" title="${f.saldo == null ? '' : f.saldo.toLocaleString('es-CO')}">${f.saldo == null ? '—' : neg(f.saldo)}</td>
       </tr>`).join('');
     const sum = i => lista.reduce((s, f) => s + f.fr[i], 0);
     const pie = conSubtotal ? `<tr style="border-top:2px solid #0A0E28;font-weight:800">
@@ -3103,7 +3184,6 @@ function renderCierreAsesores() {
       `Meta Ideal <strong>${fmtM(metaIdealVig)}</strong>`,
       `Meta Mínima <strong>${fmtM(metaMinimaVig)}</strong>`,
       metaComisVig > 0 ? `Línea de Comisión <strong>${fmtM(metaComisVig)}</strong>` : null,
-      `Recaudado <strong>${fmtM(totalVig)}</strong>`,
     ].filter(Boolean).join(DOT);
 
     elVigente.innerHTML = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;
@@ -3456,7 +3536,7 @@ function switchView(name, btn) {
   // esto evita que el banner de metas o la tabla se queden desactualizados por la carrera.
   if (name === 'asesores' && lastRendered) renderAsesores();
   if (name === 'historico' && lastRendered) renderHistorico();
-  if (name === 'forecast') { renderForecast(); loadForecast(); } // se relee el Sheet en cada visita
+  if (name === 'forecast') { renderMoraPlano(); renderForecast(); loadForecast(); loadMoraPlano(); } // se relee el Sheet en cada visita
 
   // Se aplica DESPUÉS de renderKPIs()/renderBuckets() a propósito: esas funciones
   // a veces resetean su propio display internamente, así que esta pasada final
